@@ -5,15 +5,17 @@ import { formatCurrency, formatQuantity } from '../../lib/format';
 
 interface ScaledIngredientTableProps {
   result: RecipeCostResult;
+  showGroupColumn?: boolean;
 }
 
-export function ScaledIngredientTable({ result }: ScaledIngredientTableProps) {
+export function ScaledIngredientTable({ result, showGroupColumn = false }: ScaledIngredientTableProps) {
   return (
     <div className="overflow-x-auto rounded-lg border border-slate-200">
       <table className="w-full text-left text-sm">
         <thead className="bg-slate-50 text-slate-600">
           <tr>
             <th className="px-4 py-2 font-medium">Ingredient</th>
+            {showGroupColumn && <th className="px-4 py-2 font-medium">Group</th>}
             <th className="px-4 py-2 font-medium">Quantity</th>
             <th className="px-4 py-2 font-medium text-right">Cost</th>
           </tr>
@@ -22,6 +24,9 @@ export function ScaledIngredientTable({ result }: ScaledIngredientTableProps) {
           {result.lines.map((line) => (
             <tr key={line.lineId} className={line.missingIngredient ? 'text-amber-600' : ''}>
               <td className="px-4 py-2">{line.ingredientName}</td>
+              {showGroupColumn && (
+                <td className="px-4 py-2 text-slate-500">{line.groupName}</td>
+              )}
               <td className="px-4 py-2">
                 {formatQuantity(line.quantity)} {UNIT_LABELS[line.unit as Unit]}
               </td>
@@ -30,9 +35,11 @@ export function ScaledIngredientTable({ result }: ScaledIngredientTableProps) {
           ))}
           {result.extraCosts.map((extra) => (
             <tr key={extra.id}>
-              <td className="px-4 py-2 text-slate-500" colSpan={2}>
-                {extra.label || 'Extra cost'}
-              </td>
+              <td className="px-4 py-2 text-slate-500">{extra.label || 'Extra cost'}</td>
+              {showGroupColumn && (
+                <td className="px-4 py-2 text-slate-500">{extra.groupName}</td>
+              )}
+              <td className="px-4 py-2" />
               <td className="px-4 py-2 text-right text-slate-500">
                 {formatCurrency(extra.amount)}
               </td>

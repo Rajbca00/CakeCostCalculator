@@ -9,23 +9,42 @@ import { CloneRecipeDialog } from '../components/recipes/CloneRecipeDialog';
 import { useAppDataContext, useRecipes } from '../state/useAppData';
 import type { Recipe } from '../types';
 import { cloneRecipeWithName } from '../lib/recipeClone';
-import { useToast } from '../components/layout/Toast';
 
 export function RecipesPage() {
   const recipes = useRecipes();
   const { addRecipe, deleteRecipe } = useAppDataContext();
   const [pendingDelete, setPendingDelete] = useState<Recipe | undefined>(undefined);
   const [cloningRecipe, setCloningRecipe] = useState<Recipe | undefined>(undefined);
+  const [deleting, setDeleting] = useState(false);
+  const [cloning, setCloning] = useState(false);
   const navigate = useNavigate();
-  const { showToast } = useToast();
 
-  function handleConfirmClone(newName: string) {
+  async function handleConfirmClone(newName: string) {
     if (!cloningRecipe) return;
     const cloned = cloneRecipeWithName(cloningRecipe, newName);
-    addRecipe(cloned);
-    setCloningRecipe(undefined);
-    showToast(`Cloned as "${cloned.name}"`, 'success');
-    navigate(`/recipes/${cloned.id}`);
+    setCloning(true);
+    try {
+      await addRecipe(cloned, `Cloned as "${cloned.name}"`);
+      setCloningRecipe(undefined);
+      navigate(`/recipes/${cloned.id}`);
+    } catch {
+      // failure toast already shown; keep dialog open so the user can retry
+    } finally {
+      setCloning(false);
+    }
+  }
+
+  async function handleConfirmDelete() {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      await deleteRecipe(pendingDelete.id);
+      setPendingDelete(undefined);
+    } catch {
+      // failure toast already shown; keep dialog open so the user can retry
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -49,6 +68,7 @@ export function RecipesPage() {
         open={!!cloningRecipe}
         sourceRecipe={cloningRecipe}
         existingRecipes={recipes}
+        confirming={cloning}
         onClose={() => setCloningRecipe(undefined)}
         onConfirm={handleConfirmClone}
       />
@@ -59,10 +79,8 @@ export function RecipesPage() {
         description="This cannot be undone."
         confirmLabel="Delete"
         danger
-        onConfirm={() => {
-          if (pendingDelete) deleteRecipe(pendingDelete.id);
-          setPendingDelete(undefined);
-        }}
+        confirming={deleting}
+        onConfirm={handleConfirmDelete}
         onCancel={() => setPendingDelete(undefined)}
       />
     </PageContainer>

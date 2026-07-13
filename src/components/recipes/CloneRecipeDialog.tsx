@@ -10,6 +10,7 @@ interface CloneRecipeDialogProps {
   open: boolean;
   sourceRecipe: Recipe | undefined;
   existingRecipes: Recipe[];
+  confirming?: boolean;
   onClose: () => void;
   onConfirm: (newName: string) => void;
 }
@@ -18,6 +19,7 @@ export function CloneRecipeDialog({
   open,
   sourceRecipe,
   existingRecipes,
+  confirming = false,
   onClose,
   onConfirm,
 }: CloneRecipeDialogProps) {
@@ -43,7 +45,7 @@ export function CloneRecipeDialog({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setTouched(true);
-    if (error) return;
+    if (error || confirming) return;
     onConfirm(name.trim());
   }
 
@@ -58,10 +60,12 @@ export function CloneRecipeDialog({
           autoFocus
         />
         <div className="mt-2 flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={confirming}>
             Cancel
           </Button>
-          <Button type="submit">Clone recipe</Button>
+          <Button type="submit" loading={confirming}>
+            Clone recipe
+          </Button>
         </div>
       </form>
     </Modal>

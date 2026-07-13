@@ -8,6 +8,7 @@ interface ConfirmDialogProps {
   confirmLabel?: string;
   cancelLabel?: string;
   danger?: boolean;
+  confirming?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -19,6 +20,7 @@ export function ConfirmDialog({
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   danger = false,
+  confirming = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -30,10 +32,10 @@ export function ConfirmDialog({
         <h3 className="text-base font-semibold text-slate-900">{title}</h3>
         {description && <div className="mt-2 text-sm text-slate-600">{description}</div>}
         <div className="mt-5 flex justify-end gap-2">
-          <Button variant="secondary" onClick={onCancel}>
+          <Button variant="secondary" onClick={onCancel} disabled={confirming}>
             {cancelLabel}
           </Button>
-          <Button variant={danger ? 'danger' : 'primary'} onClick={onConfirm}>
+          <Button variant={danger ? 'danger' : 'primary'} onClick={onConfirm} loading={confirming}>
             {confirmLabel}
           </Button>
         </div>

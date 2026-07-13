@@ -48,6 +48,10 @@ export function RecipeCostSummary({ result, yieldLabel }: RecipeCostSummaryProps
             <span>Selling price per {yieldLabel || 'unit'}</span>
             <span>{formatUnitCost(result.sellingPricePerYieldUnit)}</span>
           </div>
+          <div className="flex justify-between py-1 text-emerald-700">
+            <span>Profit amount</span>
+            <span className="font-medium">{formatCurrency(result.profitAmount)}</span>
+          </div>
         </>
       )}
     </div>

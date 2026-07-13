@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { PageContainer } from '../components/layout/PageContainer';
 import { Button } from '../components/common/Button';
@@ -9,6 +9,7 @@ import { ExtraCostEditor } from '../components/recipes/ExtraCostEditor';
 import { RecipeCostSummary } from '../components/recipes/RecipeCostSummary';
 import { CloneRecipeDialog } from '../components/recipes/CloneRecipeDialog';
 import { RecipeScalePanel } from '../components/scaling/RecipeScalePanel';
+import { RecipeGroupFilter } from '../components/scaling/RecipeGroupFilter';
 import { ScaledIngredientTable } from '../components/scaling/ScaledIngredientTable';
 import {
   useAppDataContext,
@@ -20,6 +21,7 @@ import {
 import type { ExtraCost, Recipe, RecipeIngredientLine } from '../types';
 import { generateId } from '../lib/id';
 import { calculateRecipeCost } from '../lib/costCalculations';
+import { getGroupNames } from '../lib/recipeGroups';
 import {
   isNonEmptyString,
   isNonNegativeNumber,
@@ -27,6 +29,8 @@ import {
   isRecipeNameUnique,
 } from '../lib/validation';
 import { cloneRecipeWithName } from '../lib/recipeClone';
+import { captureElementAsPng, shareOrDownloadImage } from '../lib/shareImage';
+import { formatQuantity } from '../lib/format';
 import { useToast } from '../components/layout/Toast';
 
 interface DraftState {
@@ -66,7 +70,31 @@ export function RecipeDetailPage() {
   const [touched, setTouched] = useState(false);
   const [tab, setTab] = useState<'edit' | 'calculate'>('edit');
   const [multiplier, setMultiplier] = useState(1);
+  const [cloneDialogOpen, setCloneDialogOpen] = useState(false);
   const [cloning, setCloning] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
+  const [sharing, setSharing] = useState(false);
+  const shareRef = useRef<HTMLDivElement>(null);
+
+  const recipeGroupNames = useMemo(() => (recipe ? getGroupNames(recipe) : []), [recipe]);
+  const hasMultipleGroups = recipeGroupNames.length > 1;
+
+  useEffect(() => {
+    if (recipe) setSelectedGroups(new Set(getGroupNames(recipe)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recipe?.id]);
+
+  const draftGroupSuggestions = useMemo(() => {
+    const seen: string[] = [];
+    const add = (name: string | undefined) => {
+      const trimmed = name?.trim();
+      if (trimmed && !seen.includes(trimmed)) seen.push(trimmed);
+    };
+    draft.ingredientLines.forEach((l) => add(l.groupName));
+    draft.extraCosts.forEach((e) => add(e.groupName));
+    return seen;
+  }, [draft.ingredientLines, draft.extraCosts]);
 
   const draftAsRecipe: Recipe = useMemo(
     () => ({
@@ -90,8 +118,16 @@ export function RecipeDetailPage() {
   );
 
   const scaledCostResult = useMemo(
-    () => (recipe ? calculateRecipeCost(recipe, ingredientsById, multiplier) : baseCostResult),
-    [recipe, ingredientsById, multiplier, baseCostResult],
+    () =>
+      recipe
+        ? calculateRecipeCost(
+            recipe,
+            ingredientsById,
+            multiplier,
+            hasMultipleGroups ? selectedGroups : undefined,
+          )
+        : baseCostResult,
+    [recipe, ingredientsById, multiplier, hasMultipleGroups, selectedGroups, baseCostResult],
   );
 
   const errors = {
@@ -110,18 +146,43 @@ export function RecipeDetailPage() {
   };
   const hasErrors = Object.values(errors).some(Boolean);
 
-  function handleConfirmClone(newName: string) {
-    if (!recipe) return;
-    const cloned = cloneRecipeWithName(recipe, newName);
-    addRecipe(cloned);
-    setCloning(false);
-    showToast(`Cloned as "${cloned.name}"`, 'success');
-    navigate(`/recipes/${cloned.id}`);
+  async function handleShareImage() {
+    if (!shareRef.current || !recipe) return;
+    setSharing(true);
+    try {
+      const blob = await captureElementAsPng(shareRef.current);
+      const filename = `${recipe.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.png`;
+      const result = await shareOrDownloadImage(blob, filename, recipe.name);
+      if (result === 'downloaded') showToast('Image downloaded', 'success');
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        // user cancelled the native share sheet — not an error
+      } else {
+        showToast('Could not create the image. Please try again.', 'error');
+      }
+    } finally {
+      setSharing(false);
+    }
   }
 
-  function handleSave() {
+  async function handleConfirmClone(newName: string) {
+    if (!recipe) return;
+    const cloned = cloneRecipeWithName(recipe, newName);
+    setCloning(true);
+    try {
+      await addRecipe(cloned, `Cloned as "${cloned.name}"`);
+      setCloneDialogOpen(false);
+      navigate(`/recipes/${cloned.id}`);
+    } catch {
+      // failure toast already shown; keep dialog open so the user can retry
+    } finally {
+      setCloning(false);
+    }
+  }
+
+  async function handleSave() {
     setTouched(true);
-    if (hasErrors) return;
+    if (hasErrors || saving) return;
 
     const now = new Date().toISOString();
     const saved: Recipe = {
@@ -137,13 +198,18 @@ export function RecipeDetailPage() {
       updatedAt: now,
     };
 
-    if (recipe) {
-      updateRecipe(saved);
-      showToast(`"${saved.name}" updated`, 'success');
-    } else {
-      addRecipe(saved);
-      showToast(`"${saved.name}" created`, 'success');
-      navigate(`/recipes/${saved.id}`, { replace: true });
+    setSaving(true);
+    try {
+      if (recipe) {
+        await updateRecipe(saved);
+      } else {
+        await addRecipe(saved);
+        navigate(`/recipes/${saved.id}`, { replace: true });
+      }
+    } catch {
+      // failure toast already shown by the context
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -155,7 +221,7 @@ export function RecipeDetailPage() {
         </h1>
         <div className="flex shrink-0 gap-2">
           {recipe && (
-            <Button variant="secondary" onClick={() => setCloning(true)}>
+            <Button variant="secondary" onClick={() => setCloneDialogOpen(true)}>
               Clone
             </Button>
           )}
@@ -166,10 +232,11 @@ export function RecipeDetailPage() {
       </div>
 
       <CloneRecipeDialog
-        open={cloning}
+        open={cloneDialogOpen}
         sourceRecipe={recipe}
         existingRecipes={recipes}
-        onClose={() => setCloning(false)}
+        confirming={cloning}
+        onClose={() => setCloneDialogOpen(false)}
         onConfirm={handleConfirmClone}
       />
 
@@ -231,8 +298,19 @@ export function RecipeDetailPage() {
             />
           </div>
 
+          <datalist id="recipe-group-suggestions">
+            {draftGroupSuggestions.map((g) => (
+              <option key={g} value={g} />
+            ))}
+          </datalist>
+
           <div>
-            <h2 className="mb-2 text-sm font-semibold text-slate-800">Ingredients</h2>
+            <h2 className="mb-2 text-sm font-semibold text-slate-800">
+              Ingredients{' '}
+              <span className="font-normal text-slate-400">
+                (optionally group with a name, e.g. "Base cake", "Icing 1")
+              </span>
+            </h2>
             <RecipeIngredientLineEditor
               lines={draft.ingredientLines}
               ingredients={ingredients}
@@ -253,23 +331,50 @@ export function RecipeDetailPage() {
           <RecipeCostSummary result={baseCostResult} yieldLabel={draft.baseYieldLabel} />
 
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => navigate('/recipes')}>
+            <Button variant="secondary" onClick={() => navigate('/recipes')} disabled={saving}>
               Cancel
             </Button>
-            <Button onClick={handleSave}>Save recipe</Button>
+            <Button onClick={handleSave} loading={saving}>
+              Save recipe
+            </Button>
           </div>
         </div>
       ) : (
         recipe && (
           <div className="flex flex-col gap-4">
+            {hasMultipleGroups && (
+              <RecipeGroupFilter
+                groups={recipeGroupNames}
+                selectedGroups={selectedGroups}
+                onChange={setSelectedGroups}
+              />
+            )}
             <RecipeScalePanel
               baseYieldQuantity={recipe.baseYieldQuantity}
               baseYieldLabel={recipe.baseYieldLabel}
               multiplier={multiplier}
               onMultiplierChange={setMultiplier}
             />
-            <ScaledIngredientTable result={scaledCostResult} />
-            <RecipeCostSummary result={scaledCostResult} yieldLabel={recipe.baseYieldLabel} />
+
+            <div className="flex justify-end">
+              <Button variant="secondary" onClick={handleShareImage} loading={sharing}>
+                Share as image
+              </Button>
+            </div>
+
+            <div ref={shareRef} className="flex flex-col gap-4 bg-white p-4">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">{recipe.name}</h3>
+                <p className="text-sm text-slate-500">
+                  {formatQuantity(scaledCostResult.yieldQuantity)} {recipe.baseYieldLabel}
+                  {hasMultipleGroups && selectedGroups.size < recipeGroupNames.length && (
+                    <> · Includes: {Array.from(selectedGroups).join(', ')}</>
+                  )}
+                </p>
+              </div>
+              <ScaledIngredientTable result={scaledCostResult} showGroupColumn={hasMultipleGroups} />
+              <RecipeCostSummary result={scaledCostResult} yieldLabel={recipe.baseYieldLabel} />
+            </div>
           </div>
         )
       )}

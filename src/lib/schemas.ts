@@ -18,6 +18,7 @@ export const RecipeIngredientLineSchema = z.object({
   ingredientId: z.string(),
   quantity: z.number(),
   unit: UnitSchema,
+  groupName: z.string().optional(),
 });
 
 export const ExtraCostSchema = z.object({
@@ -25,6 +26,7 @@ export const ExtraCostSchema = z.object({
   label: z.string(),
   amount: z.number(),
   scalesWithYield: z.boolean(),
+  groupName: z.string().optional(),
 });
 
 export const RecipeSchema = z.object({

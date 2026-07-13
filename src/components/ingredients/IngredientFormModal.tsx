@@ -13,7 +13,7 @@ interface IngredientFormModalProps {
   open: boolean;
   ingredient?: Ingredient;
   onClose: () => void;
-  onSave: (ingredient: Ingredient) => void;
+  onSave: (ingredient: Ingredient) => Promise<void>;
 }
 
 interface FormState {
@@ -42,6 +42,7 @@ export function IngredientFormModal({
 }: IngredientFormModalProps) {
   const [form, setForm] = useState<FormState>(() => initialFormState(ingredient));
   const [touched, setTouched] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   if (!open) return null;
 
@@ -60,10 +61,10 @@ export function IngredientFormModal({
     onClose();
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setTouched(true);
-    if (hasErrors) return;
+    if (hasErrors || saving) return;
 
     const now = new Date().toISOString();
     const saved: Ingredient = {
@@ -76,7 +77,16 @@ export function IngredientFormModal({
       createdAt: ingredient?.createdAt ?? now,
       updatedAt: now,
     };
-    onSave(saved);
+    setSaving(true);
+    try {
+      await onSave(saved);
+    } catch {
+      // failure toast already shown by the caller; keep the modal open so
+      // the user's edits aren't lost and they can retry
+      setSaving(false);
+      return;
+    }
+    setSaving(false);
     handleClose();
   }
 
@@ -117,10 +127,12 @@ export function IngredientFormModal({
           onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
         />
         <div className="mt-2 flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={handleClose}>
+          <Button type="button" variant="secondary" onClick={handleClose} disabled={saving}>
             Cancel
           </Button>
-          <Button type="submit">Save</Button>
+          <Button type="submit" loading={saving}>
+            Save
+          </Button>
         </div>
       </form>
     </Modal>

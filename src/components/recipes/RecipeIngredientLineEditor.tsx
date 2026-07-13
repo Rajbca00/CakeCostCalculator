@@ -5,6 +5,7 @@ import { formatCurrency } from '../../lib/format';
 import { generateId } from '../../lib/id';
 import { NumberInput } from '../common/NumberInput';
 import { Select } from '../common/Select';
+import { TextInput } from '../common/TextInput';
 import { UnitSelect } from '../common/UnitSelect';
 import { Button } from '../common/Button';
 import { Link } from 'react-router-dom';
@@ -93,6 +94,14 @@ export function RecipeIngredientLineEditor({
               category={category}
               value={line.unit}
               onChange={(unit) => updateLine(line.id, { unit })}
+            />
+            <TextInput
+              label="Group (optional)"
+              value={line.groupName ?? ''}
+              onChange={(e) => updateLine(line.id, { groupName: e.target.value })}
+              placeholder="e.g. Base cake"
+              list="recipe-group-suggestions"
+              className="w-36"
             />
             <span className="mb-2 min-w-[5rem] text-sm text-slate-600">
               {formatCurrency(lineCost(line, ingredient))}

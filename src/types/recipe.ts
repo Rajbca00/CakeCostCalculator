@@ -5,6 +5,8 @@ export interface RecipeIngredientLine {
   ingredientId: string;
   quantity: number;
   unit: Unit;
+  /** Optional named group, e.g. "Base cake", "Icing 1". Blank/undefined = ungrouped. */
+  groupName?: string;
 }
 
 export interface ExtraCost {
@@ -12,6 +14,8 @@ export interface ExtraCost {
   label: string;
   amount: number;
   scalesWithYield: boolean;
+  /** Optional named group, e.g. "Decorations & toppings". Blank/undefined = ungrouped. */
+  groupName?: string;
 }
 
 export interface Recipe {

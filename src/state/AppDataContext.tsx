@@ -18,12 +18,12 @@ interface AppDataContextValue {
   ingredients: Ingredient[];
   recipes: Recipe[];
   isLoading: boolean;
-  addIngredient: (ingredient: Ingredient) => void;
-  updateIngredient: (ingredient: Ingredient) => void;
-  deleteIngredient: (id: string) => void;
-  addRecipe: (recipe: Recipe) => void;
-  updateRecipe: (recipe: Recipe) => void;
-  deleteRecipe: (id: string) => void;
+  addIngredient: (ingredient: Ingredient) => Promise<void>;
+  updateIngredient: (ingredient: Ingredient) => Promise<void>;
+  deleteIngredient: (id: string) => Promise<void>;
+  addRecipe: (recipe: Recipe, successMessage?: string) => Promise<void>;
+  updateRecipe: (recipe: Recipe) => Promise<void>;
+  deleteRecipe: (id: string) => Promise<void>;
   replaceAllData: (data: AppData) => Promise<void>;
   getSnapshot: () => AppData;
 }
@@ -68,61 +68,87 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function addIngredient(ingredient: Ingredient) {
+  async function addIngredient(ingredient: Ingredient): Promise<void> {
     dispatch({ type: 'ADD_INGREDIENT', ingredient });
     if (!user) return;
-    insertIngredientRow(user.id, ingredient).catch(() => {
+    try {
+      await insertIngredientRow(user.id, ingredient);
+      showToast(`"${ingredient.name}" added`, 'success');
+    } catch {
       showToast('Could not save the ingredient. Refreshing…', 'error');
-      resync();
-    });
+      await resync();
+      throw new Error('Failed to save ingredient');
+    }
   }
 
-  function updateIngredient(ingredient: Ingredient) {
+  async function updateIngredient(ingredient: Ingredient): Promise<void> {
     dispatch({ type: 'UPDATE_INGREDIENT', ingredient });
     if (!user) return;
-    updateIngredientRow(user.id, ingredient).catch(() => {
+    try {
+      await updateIngredientRow(user.id, ingredient);
+      showToast(`"${ingredient.name}" updated`, 'success');
+    } catch {
       showToast('Could not save the change. Refreshing…', 'error');
-      resync();
-    });
+      await resync();
+      throw new Error('Failed to update ingredient');
+    }
   }
 
-  function deleteIngredient(id: string) {
+  async function deleteIngredient(id: string): Promise<void> {
+    const name = state.ingredients.find((i) => i.id === id)?.name ?? 'Ingredient';
     dispatch({ type: 'DELETE_INGREDIENT', id });
     if (!user) return;
-    deleteIngredientRow(user.id, id).catch(() => {
+    try {
+      await deleteIngredientRow(user.id, id);
+      showToast(`"${name}" deleted`, 'success');
+    } catch {
       showToast('Could not delete the ingredient. Refreshing…', 'error');
-      resync();
-    });
+      await resync();
+      throw new Error('Failed to delete ingredient');
+    }
   }
 
-  function addRecipe(recipe: Recipe) {
+  async function addRecipe(recipe: Recipe, successMessage?: string): Promise<void> {
     dispatch({ type: 'ADD_RECIPE', recipe });
     if (!user) return;
-    insertRecipeRow(user.id, recipe).catch(() => {
+    try {
+      await insertRecipeRow(user.id, recipe);
+      showToast(successMessage ?? `"${recipe.name}" added`, 'success');
+    } catch {
       showToast('Could not save the recipe. Refreshing…', 'error');
-      resync();
-    });
+      await resync();
+      throw new Error('Failed to save recipe');
+    }
   }
 
-  function updateRecipe(recipe: Recipe) {
+  async function updateRecipe(recipe: Recipe): Promise<void> {
     dispatch({ type: 'UPDATE_RECIPE', recipe });
     if (!user) return;
-    updateRecipeRow(user.id, recipe).catch(() => {
+    try {
+      await updateRecipeRow(user.id, recipe);
+      showToast(`"${recipe.name}" updated`, 'success');
+    } catch {
       showToast('Could not save the change. Refreshing…', 'error');
-      resync();
-    });
+      await resync();
+      throw new Error('Failed to update recipe');
+    }
   }
 
-  function deleteRecipe(id: string) {
+  async function deleteRecipe(id: string): Promise<void> {
+    const name = state.recipes.find((r) => r.id === id)?.name ?? 'Recipe';
     dispatch({ type: 'DELETE_RECIPE', id });
     if (!user) return;
-    deleteRecipeRow(user.id, id).catch(() => {
+    try {
+      await deleteRecipeRow(user.id, id);
+      showToast(`"${name}" deleted`, 'success');
+    } catch {
       showToast('Could not delete the recipe. Refreshing…', 'error');
-      resync();
-    });
+      await resync();
+      throw new Error('Failed to delete recipe');
+    }
   }
 
-  async function replaceAllData(data: AppData) {
+  async function replaceAllData(data: AppData): Promise<void> {
     dispatch({ type: 'LOAD', data });
     if (!user) return;
     await replaceAllRows(user.id, data);

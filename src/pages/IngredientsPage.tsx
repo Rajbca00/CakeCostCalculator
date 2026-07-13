@@ -19,6 +19,8 @@ export function IngredientsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingIngredient, setEditingIngredient] = useState<Ingredient | undefined>(undefined);
   const [pendingDelete, setPendingDelete] = useState<Ingredient | undefined>(undefined);
+  const [deleting, setDeleting] = useState(false);
+  const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const usedByRecipes = useRecipesUsingIngredient(pendingDelete?.id ?? '');
@@ -33,18 +35,24 @@ export function IngredientsPage() {
     setModalOpen(true);
   }
 
-  function handleSave(ingredient: Ingredient) {
+  async function handleSave(ingredient: Ingredient) {
     if (editingIngredient) {
-      updateIngredient(ingredient);
+      await updateIngredient(ingredient);
     } else {
-      addIngredient(ingredient);
+      await addIngredient(ingredient);
     }
   }
 
-  function handleConfirmDelete() {
-    if (pendingDelete) {
-      deleteIngredient(pendingDelete.id);
+  async function handleConfirmDelete() {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      await deleteIngredient(pendingDelete.id);
       setPendingDelete(undefined);
+    } catch {
+      // failure toast already shown; keep dialog open so the user can retry
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -69,11 +77,14 @@ export function IngredientsPage() {
         `This will replace ${current.ingredients.length} ingredients and ${current.recipes.length} recipes with ${result.data.ingredients.length} ingredients and ${result.data.recipes.length} recipes from the file. Continue?`,
       );
       if (!confirmed) return;
+      setImporting(true);
       try {
         await replaceAllData(result.data);
         showToast('Data imported successfully.', 'success');
       } catch {
         showToast('Import failed while saving to the server. Please try again.', 'error');
+      } finally {
+        setImporting(false);
       }
     };
     reader.readAsText(file);
@@ -87,7 +98,7 @@ export function IngredientsPage() {
           <Button variant="secondary" onClick={() => exportAppData(getSnapshot())}>
             Export
           </Button>
-          <Button variant="secondary" onClick={handleImportClick}>
+          <Button variant="secondary" onClick={handleImportClick} loading={importing}>
             Import
           </Button>
           <input
@@ -138,6 +149,7 @@ export function IngredientsPage() {
         }
         confirmLabel="Delete"
         danger
+        confirming={deleting}
         onConfirm={handleConfirmDelete}
         onCancel={() => setPendingDelete(undefined)}
       />

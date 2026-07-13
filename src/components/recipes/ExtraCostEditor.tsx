@@ -44,6 +44,14 @@ export function ExtraCostEditor({ extraCosts, onChange }: ExtraCostEditorProps) 
             value={cost.amount}
             onValueChange={(v) => updateCost(cost.id, { amount: v })}
           />
+          <TextInput
+            label="Group (optional)"
+            value={cost.groupName ?? ''}
+            onChange={(e) => updateCost(cost.id, { groupName: e.target.value })}
+            placeholder="e.g. Decorations"
+            list="recipe-group-suggestions"
+            className="w-36"
+          />
           <label className="mb-2 flex items-center gap-1.5 text-sm text-slate-600">
             <input
               type="checkbox"
