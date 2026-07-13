@@ -52,6 +52,12 @@ export interface RecipeCostResult {
   sellingTotal: number;
   /** sellingTotal - total, i.e. the exact currency amount of profit. */
   profitAmount: number;
+  /** Discount % taken off the selling price, e.g. 10 means 10% off. */
+  discountPercent: number;
+  /** sellingTotal - finalPrice, i.e. the exact currency amount discounted. */
+  discountAmount: number;
+  /** Selling price after the discount is applied. */
+  finalPrice: number;
 }
 
 export function calculateRecipeCost(
@@ -59,6 +65,7 @@ export function calculateRecipeCost(
   ingredientsById: Map<string, Ingredient>,
   multiplier: number = 1,
   activeGroups?: Set<string>,
+  discountPercent: number = 0,
 ): RecipeCostResult {
   const lines: RecipeCostLineResult[] = recipe.ingredientLines
     .filter((line) => !activeGroups || activeGroups.has(normalizeGroupName(line.groupName)))
@@ -107,6 +114,9 @@ export function calculateRecipeCost(
   const profitPercent = recipe.profitPercent || 0;
   const sellingTotal = round2(total * (1 + profitPercent / 100));
 
+  const safeDiscountPercent = Math.min(100, Math.max(0, discountPercent || 0));
+  const finalPrice = round2(sellingTotal * (1 - safeDiscountPercent / 100));
+
   return {
     lines,
     extraCosts,
@@ -118,5 +128,8 @@ export function calculateRecipeCost(
     profitPercent,
     sellingTotal,
     profitAmount: round2(sellingTotal - total),
+    discountPercent: safeDiscountPercent,
+    discountAmount: round2(sellingTotal - finalPrice),
+    finalPrice,
   };
 }

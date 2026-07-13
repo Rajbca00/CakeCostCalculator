@@ -46,6 +46,19 @@ export function RecipeCostSummary({ result, yieldLabel }: RecipeCostSummaryProps
           </div>
         </>
       )}
+
+      {result.discountPercent > 0 && (
+        <>
+          <div className="flex justify-between py-1 text-amber-700">
+            <span>Discount ({result.discountPercent}%)</span>
+            <span className="font-medium">-{formatCurrency(result.discountAmount)}</span>
+          </div>
+          <div className="mt-2 flex justify-between border-t border-slate-200 py-1 pt-2">
+            <span className="font-semibold text-slate-900">Final price</span>
+            <span className="font-semibold text-slate-900">{formatCurrency(result.finalPrice)}</span>
+          </div>
+        </>
+      )}
     </div>
   );
 }

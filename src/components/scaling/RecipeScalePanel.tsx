@@ -16,8 +16,13 @@ export function RecipeScalePanel({
   const targetYield = baseYieldQuantity * multiplier;
 
   function handleTargetYieldChange(value: number) {
-    if (!Number.isFinite(value) || baseYieldQuantity <= 0) return;
+    if (!Number.isFinite(value) || value < 0 || baseYieldQuantity <= 0) return;
     onMultiplierChange(value / baseYieldQuantity);
+  }
+
+  function handleMultiplierChange(value: number) {
+    if (!Number.isFinite(value) || value < 0) return;
+    onMultiplierChange(value);
   }
 
   return (
@@ -32,7 +37,7 @@ export function RecipeScalePanel({
       <NumberInput
         label="Multiplier"
         value={multiplier}
-        onValueChange={onMultiplierChange}
+        onValueChange={handleMultiplierChange}
         min={0}
         className="w-24"
       />

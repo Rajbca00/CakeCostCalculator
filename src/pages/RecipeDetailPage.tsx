@@ -71,6 +71,7 @@ export function RecipeDetailPage() {
   const [touched, setTouched] = useState(false);
   const [tab, setTab] = useState<'edit' | 'calculate'>('edit');
   const [multiplier, setMultiplier] = useState(1);
+  const [discountPercent, setDiscountPercent] = useState(0);
   const [cloneDialogOpen, setCloneDialogOpen] = useState(false);
   const [cloning, setCloning] = useState(false);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
@@ -128,9 +129,18 @@ export function RecipeDetailPage() {
             ingredientsById,
             multiplier,
             hasMultipleGroups ? selectedGroups : undefined,
+            discountPercent,
           )
         : baseCostResult,
-    [recipe, ingredientsById, multiplier, hasMultipleGroups, selectedGroups, baseCostResult],
+    [
+      recipe,
+      ingredientsById,
+      multiplier,
+      hasMultipleGroups,
+      selectedGroups,
+      discountPercent,
+      baseCostResult,
+    ],
   );
 
   const errors = {
@@ -383,6 +393,20 @@ export function RecipeDetailPage() {
               multiplier={multiplier}
               onMultiplierChange={setMultiplier}
             />
+
+            <div className="flex flex-wrap items-end gap-4 rounded-lg border border-slate-200 p-4">
+              <NumberInput
+                label="Discount % (optional)"
+                value={discountPercent}
+                onValueChange={(v) => {
+                  if (!Number.isFinite(v) || v < 0) return;
+                  setDiscountPercent(Math.min(100, v));
+                }}
+                min={0}
+                className="w-32"
+                placeholder="e.g. 10"
+              />
+            </div>
 
             <div className="flex justify-end">
               <Button variant="secondary" onClick={handleShareImage} loading={sharing}>
