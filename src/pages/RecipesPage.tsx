@@ -5,14 +5,25 @@ import { EmptyState } from '../components/layout/EmptyState';
 import { ConfirmDialog } from '../components/layout/ConfirmDialog';
 import { Button } from '../components/common/Button';
 import { RecipeList } from '../components/recipes/RecipeList';
+import { CloneRecipeDialog } from '../components/recipes/CloneRecipeDialog';
 import { useAppDataContext, useRecipes } from '../state/useAppData';
 import type { Recipe } from '../types';
+import { cloneRecipeWithName } from '../lib/recipeClone';
 
 export function RecipesPage() {
   const recipes = useRecipes();
-  const { deleteRecipe } = useAppDataContext();
+  const { addRecipe, deleteRecipe } = useAppDataContext();
   const [pendingDelete, setPendingDelete] = useState<Recipe | undefined>(undefined);
+  const [cloningRecipe, setCloningRecipe] = useState<Recipe | undefined>(undefined);
   const navigate = useNavigate();
+
+  function handleConfirmClone(newName: string) {
+    if (!cloningRecipe) return;
+    const cloned = cloneRecipeWithName(cloningRecipe, newName);
+    addRecipe(cloned);
+    setCloningRecipe(undefined);
+    navigate(`/recipes/${cloned.id}`);
+  }
 
   return (
     <PageContainer>
@@ -28,8 +39,16 @@ export function RecipesPage() {
           action={<Button onClick={() => navigate('/recipes/new')}>Add your first recipe</Button>}
         />
       ) : (
-        <RecipeList recipes={recipes} onDelete={setPendingDelete} />
+        <RecipeList recipes={recipes} onClone={setCloningRecipe} onDelete={setPendingDelete} />
       )}
+
+      <CloneRecipeDialog
+        open={!!cloningRecipe}
+        sourceRecipe={cloningRecipe}
+        existingRecipes={recipes}
+        onClose={() => setCloningRecipe(undefined)}
+        onConfirm={handleConfirmClone}
+      />
 
       <ConfirmDialog
         open={!!pendingDelete}

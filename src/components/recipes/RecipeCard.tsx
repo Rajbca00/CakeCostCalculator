@@ -7,10 +7,11 @@ import { Button } from '../common/Button';
 
 interface RecipeCardProps {
   recipe: Recipe;
+  onClone: (recipe: Recipe) => void;
   onDelete: (recipe: Recipe) => void;
 }
 
-export function RecipeCard({ recipe, onDelete }: RecipeCardProps) {
+export function RecipeCard({ recipe, onClone, onDelete }: RecipeCardProps) {
   const ingredientsById = useIngredientsById();
   const result = calculateRecipeCost(recipe, ingredientsById);
 
@@ -32,6 +33,9 @@ export function RecipeCard({ recipe, onDelete }: RecipeCardProps) {
         <Link to={`/recipes/${recipe.id}`}>
           <Button variant="secondary">Open</Button>
         </Link>
+        <Button variant="secondary" onClick={() => onClone(recipe)}>
+          Clone
+        </Button>
         <Button variant="danger" onClick={() => onDelete(recipe)}>
           Delete
         </Button>

@@ -7,6 +7,7 @@ import { NumberInput } from '../components/common/NumberInput';
 import { RecipeIngredientLineEditor } from '../components/recipes/RecipeIngredientLineEditor';
 import { ExtraCostEditor } from '../components/recipes/ExtraCostEditor';
 import { RecipeCostSummary } from '../components/recipes/RecipeCostSummary';
+import { CloneRecipeDialog } from '../components/recipes/CloneRecipeDialog';
 import { RecipeScalePanel } from '../components/scaling/RecipeScalePanel';
 import { ScaledIngredientTable } from '../components/scaling/ScaledIngredientTable';
 import {
@@ -14,11 +15,13 @@ import {
   useIngredients,
   useIngredientsById,
   useRecipeById,
+  useRecipes,
 } from '../state/useAppData';
 import type { ExtraCost, Recipe, RecipeIngredientLine } from '../types';
 import { generateId } from '../lib/id';
 import { calculateRecipeCost } from '../lib/costCalculations';
-import { isNonEmptyString, isPositiveNumber } from '../lib/validation';
+import { isNonEmptyString, isPositiveNumber, isRecipeNameUnique } from '../lib/validation';
+import { cloneRecipeWithName } from '../lib/recipeClone';
 
 interface DraftState {
   name: string;
@@ -47,12 +50,14 @@ export function RecipeDetailPage() {
   const recipe = useRecipeById(isNew ? undefined : id);
   const ingredients = useIngredients();
   const ingredientsById = useIngredientsById();
+  const recipes = useRecipes();
   const { addRecipe, updateRecipe } = useAppDataContext();
 
   const [draft, setDraft] = useState<DraftState>(() => draftFromRecipe(recipe));
   const [touched, setTouched] = useState(false);
   const [tab, setTab] = useState<'edit' | 'calculate'>('edit');
   const [multiplier, setMultiplier] = useState(1);
+  const [cloning, setCloning] = useState(false);
 
   const draftAsRecipe: Recipe = useMemo(
     () => ({
@@ -80,12 +85,24 @@ export function RecipeDetailPage() {
   );
 
   const errors = {
-    name: isNonEmptyString(draft.name) ? undefined : 'Name is required',
+    name: !isNonEmptyString(draft.name)
+      ? 'Name is required'
+      : !isRecipeNameUnique(draft.name, recipes, recipe?.id)
+        ? 'A recipe with this name already exists'
+        : undefined,
     baseYieldQuantity: isPositiveNumber(draft.baseYieldQuantity)
       ? undefined
       : 'Enter a yield greater than 0',
   };
   const hasErrors = Object.values(errors).some(Boolean);
+
+  function handleConfirmClone(newName: string) {
+    if (!recipe) return;
+    const cloned = cloneRecipeWithName(recipe, newName);
+    addRecipe(cloned);
+    setCloning(false);
+    navigate(`/recipes/${cloned.id}`);
+  }
 
   function handleSave() {
     setTouched(true);
@@ -118,10 +135,25 @@ export function RecipeDetailPage() {
         <h1 className="min-w-0 truncate text-xl font-semibold text-slate-900">
           {isNew ? 'New recipe' : recipe?.name || 'Recipe'}
         </h1>
-        <Button variant="secondary" onClick={() => navigate('/recipes')}>
-          Back to recipes
-        </Button>
+        <div className="flex shrink-0 gap-2">
+          {recipe && (
+            <Button variant="secondary" onClick={() => setCloning(true)}>
+              Clone
+            </Button>
+          )}
+          <Button variant="secondary" onClick={() => navigate('/recipes')}>
+            Back to recipes
+          </Button>
+        </div>
       </div>
+
+      <CloneRecipeDialog
+        open={cloning}
+        sourceRecipe={recipe}
+        existingRecipes={recipes}
+        onClose={() => setCloning(false)}
+        onConfirm={handleConfirmClone}
+      />
 
       <div className="mb-4 flex gap-2 border-b border-slate-200">
         <button
