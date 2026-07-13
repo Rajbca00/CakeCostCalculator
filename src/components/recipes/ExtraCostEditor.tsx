@@ -3,13 +3,15 @@ import { generateId } from '../../lib/id';
 import { TextInput } from '../common/TextInput';
 import { MoneyInput } from '../common/MoneyInput';
 import { Button } from '../common/Button';
+import { GroupSelect } from './GroupSelect';
 
 interface ExtraCostEditorProps {
   extraCosts: ExtraCost[];
+  groupOptions: string[];
   onChange: (extraCosts: ExtraCost[]) => void;
 }
 
-export function ExtraCostEditor({ extraCosts, onChange }: ExtraCostEditorProps) {
+export function ExtraCostEditor({ extraCosts, groupOptions, onChange }: ExtraCostEditorProps) {
   function updateCost(id: string, patch: Partial<ExtraCost>) {
     onChange(extraCosts.map((c) => (c.id === id ? { ...c, ...patch } : c)));
   }
@@ -44,12 +46,10 @@ export function ExtraCostEditor({ extraCosts, onChange }: ExtraCostEditorProps) 
             value={cost.amount}
             onValueChange={(v) => updateCost(cost.id, { amount: v })}
           />
-          <TextInput
-            label="Group (optional)"
-            value={cost.groupName ?? ''}
-            onChange={(e) => updateCost(cost.id, { groupName: e.target.value })}
-            placeholder="e.g. Decorations"
-            list="recipe-group-suggestions"
+          <GroupSelect
+            value={cost.groupName}
+            groupOptions={groupOptions}
+            onChange={(groupName) => updateCost(cost.id, { groupName })}
             className="w-36"
           />
           <label className="mb-2 flex items-center gap-1.5 text-sm text-slate-600">

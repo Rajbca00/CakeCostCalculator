@@ -5,20 +5,22 @@ import { formatCurrency } from '../../lib/format';
 import { generateId } from '../../lib/id';
 import { NumberInput } from '../common/NumberInput';
 import { Select } from '../common/Select';
-import { TextInput } from '../common/TextInput';
 import { UnitSelect } from '../common/UnitSelect';
 import { Button } from '../common/Button';
+import { GroupSelect } from './GroupSelect';
 import { Link } from 'react-router-dom';
 
 interface RecipeIngredientLineEditorProps {
   lines: RecipeIngredientLine[];
   ingredients: Ingredient[];
+  groupOptions: string[];
   onChange: (lines: RecipeIngredientLine[]) => void;
 }
 
 export function RecipeIngredientLineEditor({
   lines,
   ingredients,
+  groupOptions,
   onChange,
 }: RecipeIngredientLineEditorProps) {
   const ingredientsById = new Map(ingredients.map((i) => [i.id, i]));
@@ -95,12 +97,10 @@ export function RecipeIngredientLineEditor({
               value={line.unit}
               onChange={(unit) => updateLine(line.id, { unit })}
             />
-            <TextInput
-              label="Group (optional)"
-              value={line.groupName ?? ''}
-              onChange={(e) => updateLine(line.id, { groupName: e.target.value })}
-              placeholder="e.g. Base cake"
-              list="recipe-group-suggestions"
+            <GroupSelect
+              value={line.groupName}
+              groupOptions={groupOptions}
+              onChange={(groupName) => updateLine(line.id, { groupName })}
               className="w-36"
             />
             <span className="mb-2 min-w-[5rem] text-sm text-slate-600">

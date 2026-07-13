@@ -298,22 +298,17 @@ export function RecipeDetailPage() {
             />
           </div>
 
-          <datalist id="recipe-group-suggestions">
-            {draftGroupSuggestions.map((g) => (
-              <option key={g} value={g} />
-            ))}
-          </datalist>
-
           <div>
             <h2 className="mb-2 text-sm font-semibold text-slate-800">
               Ingredients{' '}
               <span className="font-normal text-slate-400">
-                (optionally group with a name, e.g. "Base cake", "Icing 1")
+                (optionally assign a group, e.g. "Base cake", "Icing 1")
               </span>
             </h2>
             <RecipeIngredientLineEditor
               lines={draft.ingredientLines}
               ingredients={ingredients}
+              groupOptions={draftGroupSuggestions}
               onChange={(lines) => setDraft((d) => ({ ...d, ingredientLines: lines }))}
             />
           </div>
@@ -324,6 +319,7 @@ export function RecipeDetailPage() {
             </h2>
             <ExtraCostEditor
               extraCosts={draft.extraCosts}
+              groupOptions={draftGroupSuggestions}
               onChange={(extraCosts) => setDraft((d) => ({ ...d, extraCosts }))}
             />
           </div>
@@ -372,7 +368,7 @@ export function RecipeDetailPage() {
                   )}
                 </p>
               </div>
-              <ScaledIngredientTable result={scaledCostResult} showGroupColumn={hasMultipleGroups} />
+              <ScaledIngredientTable result={scaledCostResult} groupBy={hasMultipleGroups} />
               <RecipeCostSummary result={scaledCostResult} yieldLabel={recipe.baseYieldLabel} />
             </div>
           </div>
