@@ -4,9 +4,10 @@ interface MoneyInputProps {
   onValueChange: (value: number) => void;
   error?: string;
   id?: string;
+  step?: number;
 }
 
-export function MoneyInput({ label, value, onValueChange, error, id }: MoneyInputProps) {
+export function MoneyInput({ label, value, onValueChange, error, id, step = 0.5 }: MoneyInputProps) {
   return (
     <label className="flex flex-col gap-1 text-sm">
       {label && <span className="font-medium text-slate-700">{label}</span>}
@@ -21,7 +22,7 @@ export function MoneyInput({ label, value, onValueChange, error, id }: MoneyInpu
           type="number"
           inputMode="decimal"
           min={0}
-          step="any"
+          step={step}
           value={Number.isFinite(value) ? value : ''}
           onChange={(e) => onValueChange(e.target.value === '' ? NaN : Number(e.target.value))}
           className="w-full rounded-md bg-transparent px-2 py-2 text-sm text-slate-900 focus:outline-none"

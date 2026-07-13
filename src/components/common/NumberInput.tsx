@@ -16,7 +16,7 @@ export function NumberInput({
   onValueChange,
   error,
   min,
-  step = 'any' as unknown as number,
+  step = 0.5,
   placeholder,
   className = '',
   id,

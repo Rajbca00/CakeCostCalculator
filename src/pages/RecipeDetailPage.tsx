@@ -8,6 +8,7 @@ import { RecipeIngredientLineEditor } from '../components/recipes/RecipeIngredie
 import { ExtraCostEditor } from '../components/recipes/ExtraCostEditor';
 import { RecipeCostSummary } from '../components/recipes/RecipeCostSummary';
 import { CloneRecipeDialog } from '../components/recipes/CloneRecipeDialog';
+import { RenameRecipeDialog } from '../components/recipes/RenameRecipeDialog';
 import { RecipeScalePanel } from '../components/scaling/RecipeScalePanel';
 import { RecipeGroupFilter } from '../components/scaling/RecipeGroupFilter';
 import { ScaledIngredientTable } from '../components/scaling/ScaledIngredientTable';
@@ -72,6 +73,8 @@ export function RecipeDetailPage() {
   const [multiplier, setMultiplier] = useState(1);
   const [cloneDialogOpen, setCloneDialogOpen] = useState(false);
   const [cloning, setCloning] = useState(false);
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [renaming, setRenaming] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
   const [sharing, setSharing] = useState(false);
@@ -180,6 +183,21 @@ export function RecipeDetailPage() {
     }
   }
 
+  async function handleConfirmRename(newName: string) {
+    if (!recipe) return;
+    const updated: Recipe = { ...recipe, name: newName, updatedAt: new Date().toISOString() };
+    setRenaming(true);
+    try {
+      await updateRecipe(updated);
+      setDraft((d) => ({ ...d, name: newName }));
+      setRenameDialogOpen(false);
+    } catch {
+      // failure toast already shown; keep dialog open so the user can retry
+    } finally {
+      setRenaming(false);
+    }
+  }
+
   async function handleSave() {
     setTouched(true);
     if (hasErrors || saving) return;
@@ -221,15 +239,29 @@ export function RecipeDetailPage() {
         </h1>
         <div className="flex shrink-0 gap-2">
           {recipe && (
-            <Button variant="secondary" onClick={() => setCloneDialogOpen(true)}>
-              Clone
-            </Button>
+            <>
+              <Button variant="secondary" onClick={() => setRenameDialogOpen(true)}>
+                Rename
+              </Button>
+              <Button variant="secondary" onClick={() => setCloneDialogOpen(true)}>
+                Clone
+              </Button>
+            </>
           )}
           <Button variant="secondary" onClick={() => navigate('/recipes')}>
             Back to recipes
           </Button>
         </div>
       </div>
+
+      <RenameRecipeDialog
+        open={renameDialogOpen}
+        recipe={recipe}
+        existingRecipes={recipes}
+        confirming={renaming}
+        onClose={() => setRenameDialogOpen(false)}
+        onConfirm={handleConfirmRename}
+      />
 
       <CloneRecipeDialog
         open={cloneDialogOpen}

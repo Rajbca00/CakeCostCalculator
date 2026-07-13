@@ -1,5 +1,5 @@
 import type { RecipeCostResult } from '../../lib/costCalculations';
-import { formatCurrency, formatUnitCost } from '../../lib/format';
+import { formatCurrency, formatQuantity } from '../../lib/format';
 
 interface RecipeCostSummaryProps {
   result: RecipeCostResult;
@@ -24,14 +24,10 @@ export function RecipeCostSummary({ result, yieldLabel }: RecipeCostSummaryProps
         <span className="font-medium">{formatCurrency(result.extrasTotal)}</span>
       </div>
       <div className="flex justify-between border-t border-slate-200 py-1 pt-2">
-        <span className="font-semibold text-slate-900">Cost total</span>
-        <span className="font-semibold text-slate-900">{formatCurrency(result.total)}</span>
-      </div>
-      <div className="flex justify-between py-1 text-slate-600">
-        <span>
-          Cost per {yieldLabel || 'unit'} ({result.yieldQuantity || 0})
+        <span className="font-semibold text-slate-900">
+          Cost total ({formatQuantity(result.yieldQuantity)} {yieldLabel || 'unit'})
         </span>
-        <span>{formatUnitCost(result.costPerYieldUnit)}</span>
+        <span className="font-semibold text-slate-900">{formatCurrency(result.total)}</span>
       </div>
 
       {result.profitPercent > 0 && (
@@ -43,10 +39,6 @@ export function RecipeCostSummary({ result, yieldLabel }: RecipeCostSummaryProps
             <span className="font-semibold text-emerald-700">
               {formatCurrency(result.sellingTotal)}
             </span>
-          </div>
-          <div className="flex justify-between py-1 text-emerald-700">
-            <span>Selling price per {yieldLabel || 'unit'}</span>
-            <span>{formatUnitCost(result.sellingPricePerYieldUnit)}</span>
           </div>
           <div className="flex justify-between py-1 text-emerald-700">
             <span>Profit amount</span>

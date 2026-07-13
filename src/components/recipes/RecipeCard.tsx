@@ -1,17 +1,18 @@
 import { Link } from 'react-router-dom';
 import type { Recipe } from '../../types';
 import { calculateRecipeCost } from '../../lib/costCalculations';
-import { formatCurrency, formatUnitCost } from '../../lib/format';
+import { formatCurrency } from '../../lib/format';
 import { useIngredientsById } from '../../state/useAppData';
 import { Button } from '../common/Button';
 
 interface RecipeCardProps {
   recipe: Recipe;
+  onRename: (recipe: Recipe) => void;
   onClone: (recipe: Recipe) => void;
   onDelete: (recipe: Recipe) => void;
 }
 
-export function RecipeCard({ recipe, onClone, onDelete }: RecipeCardProps) {
+export function RecipeCard({ recipe, onRename, onClone, onDelete }: RecipeCardProps) {
   const ingredientsById = useIngredientsById();
   const result = calculateRecipeCost(recipe, ingredientsById);
 
@@ -22,10 +23,9 @@ export function RecipeCard({ recipe, onClone, onDelete }: RecipeCardProps) {
           {recipe.name}
         </Link>
         <p className="text-sm text-slate-500">
-          {recipe.baseYieldQuantity} {recipe.baseYieldLabel} · {formatCurrency(result.total)} total ·{' '}
-          {formatUnitCost(result.costPerYieldUnit)} / {recipe.baseYieldLabel}
+          {recipe.baseYieldQuantity} {recipe.baseYieldLabel} · {formatCurrency(result.total)} total
           {result.profitPercent > 0 && (
-            <> · sells for {formatUnitCost(result.sellingPricePerYieldUnit)} / {recipe.baseYieldLabel}</>
+            <> · sells for {formatCurrency(result.sellingTotal)}</>
           )}
           {result.hasMissingIngredients && (
             <span className="ml-2 text-amber-600">⚠ missing ingredient</span>
@@ -36,6 +36,9 @@ export function RecipeCard({ recipe, onClone, onDelete }: RecipeCardProps) {
         <Link to={`/recipes/${recipe.id}`}>
           <Button variant="secondary">Open</Button>
         </Link>
+        <Button variant="secondary" onClick={() => onRename(recipe)}>
+          Rename
+        </Button>
         <Button variant="secondary" onClick={() => onClone(recipe)}>
           Clone
         </Button>

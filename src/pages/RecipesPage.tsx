@@ -6,17 +6,20 @@ import { ConfirmDialog } from '../components/layout/ConfirmDialog';
 import { Button } from '../components/common/Button';
 import { RecipeList } from '../components/recipes/RecipeList';
 import { CloneRecipeDialog } from '../components/recipes/CloneRecipeDialog';
+import { RenameRecipeDialog } from '../components/recipes/RenameRecipeDialog';
 import { useAppDataContext, useRecipes } from '../state/useAppData';
 import type { Recipe } from '../types';
 import { cloneRecipeWithName } from '../lib/recipeClone';
 
 export function RecipesPage() {
   const recipes = useRecipes();
-  const { addRecipe, deleteRecipe } = useAppDataContext();
+  const { addRecipe, updateRecipe, deleteRecipe } = useAppDataContext();
   const [pendingDelete, setPendingDelete] = useState<Recipe | undefined>(undefined);
   const [cloningRecipe, setCloningRecipe] = useState<Recipe | undefined>(undefined);
+  const [renamingRecipe, setRenamingRecipe] = useState<Recipe | undefined>(undefined);
   const [deleting, setDeleting] = useState(false);
   const [cloning, setCloning] = useState(false);
+  const [renaming, setRenaming] = useState(false);
   const navigate = useNavigate();
 
   async function handleConfirmClone(newName: string) {
@@ -31,6 +34,24 @@ export function RecipesPage() {
       // failure toast already shown; keep dialog open so the user can retry
     } finally {
       setCloning(false);
+    }
+  }
+
+  async function handleConfirmRename(newName: string) {
+    if (!renamingRecipe) return;
+    const updated: Recipe = {
+      ...renamingRecipe,
+      name: newName,
+      updatedAt: new Date().toISOString(),
+    };
+    setRenaming(true);
+    try {
+      await updateRecipe(updated);
+      setRenamingRecipe(undefined);
+    } catch {
+      // failure toast already shown; keep dialog open so the user can retry
+    } finally {
+      setRenaming(false);
     }
   }
 
@@ -61,8 +82,22 @@ export function RecipesPage() {
           action={<Button onClick={() => navigate('/recipes/new')}>Add your first recipe</Button>}
         />
       ) : (
-        <RecipeList recipes={recipes} onClone={setCloningRecipe} onDelete={setPendingDelete} />
+        <RecipeList
+          recipes={recipes}
+          onRename={setRenamingRecipe}
+          onClone={setCloningRecipe}
+          onDelete={setPendingDelete}
+        />
       )}
+
+      <RenameRecipeDialog
+        open={!!renamingRecipe}
+        recipe={renamingRecipe}
+        existingRecipes={recipes}
+        confirming={renaming}
+        onClose={() => setRenamingRecipe(undefined)}
+        onConfirm={handleConfirmRename}
+      />
 
       <CloneRecipeDialog
         open={!!cloningRecipe}

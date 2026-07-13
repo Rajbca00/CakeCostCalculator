@@ -46,12 +46,10 @@ export interface RecipeCostResult {
   extrasTotal: number;
   total: number;
   yieldQuantity: number;
-  costPerYieldUnit: number;
   hasMissingIngredients: boolean;
   /** Markup % applied on top of cost, e.g. 30 means sell at cost * 1.30. */
   profitPercent: number;
   sellingTotal: number;
-  sellingPricePerYieldUnit: number;
   /** sellingTotal - total, i.e. the exact currency amount of profit. */
   profitAmount: number;
 }
@@ -116,11 +114,9 @@ export function calculateRecipeCost(
     extrasTotal,
     total,
     yieldQuantity,
-    costPerYieldUnit: yieldQuantity > 0 ? total / yieldQuantity : 0,
     hasMissingIngredients: lines.some((l) => l.missingIngredient),
     profitPercent,
     sellingTotal,
-    sellingPricePerYieldUnit: yieldQuantity > 0 ? sellingTotal / yieldQuantity : 0,
     profitAmount: round2(sellingTotal - total),
   };
 }
