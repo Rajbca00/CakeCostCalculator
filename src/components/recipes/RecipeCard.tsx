@@ -15,8 +15,8 @@ export function RecipeCard({ recipe, onDelete }: RecipeCardProps) {
   const result = calculateRecipeCost(recipe, ingredientsById);
 
   return (
-    <div className="flex items-center justify-between rounded-lg border border-slate-200 px-4 py-3">
-      <div>
+    <div className="flex flex-col gap-3 rounded-lg border border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0">
         <Link to={`/recipes/${recipe.id}`} className="font-medium text-slate-900 hover:underline">
           {recipe.name}
         </Link>
@@ -28,7 +28,7 @@ export function RecipeCard({ recipe, onDelete }: RecipeCardProps) {
           )}
         </p>
       </div>
-      <div className="flex gap-2">
+      <div className="flex shrink-0 gap-2">
         <Link to={`/recipes/${recipe.id}`}>
           <Button variant="secondary">Open</Button>
         </Link>

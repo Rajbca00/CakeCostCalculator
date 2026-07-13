@@ -16,7 +16,7 @@ export function RecipesPage() {
 
   return (
     <PageContainer>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold text-slate-900">Recipes</h1>
         <Button onClick={() => navigate('/recipes/new')}>Add recipe</Button>
       </div>

@@ -11,7 +11,7 @@ export function MoneyInput({ label, value, onValueChange, error, id }: MoneyInpu
     <label className="flex flex-col gap-1 text-sm">
       {label && <span className="font-medium text-slate-700">{label}</span>}
       <div
-        className={`flex items-center rounded-md border focus-within:ring-2 focus-within:ring-rose-400 ${
+        className={`flex items-center rounded-md border bg-white focus-within:ring-2 focus-within:ring-rose-400 ${
           error ? 'border-red-400' : 'border-slate-300'
         }`}
       >
@@ -24,7 +24,7 @@ export function MoneyInput({ label, value, onValueChange, error, id }: MoneyInpu
           step="any"
           value={Number.isFinite(value) ? value : ''}
           onChange={(e) => onValueChange(e.target.value === '' ? NaN : Number(e.target.value))}
-          className="w-full rounded-md bg-transparent px-2 py-2 text-sm focus:outline-none"
+          className="w-full rounded-md bg-transparent px-2 py-2 text-sm text-slate-900 focus:outline-none"
         />
       </div>
       {error && <span className="text-xs text-red-600">{error}</span>}

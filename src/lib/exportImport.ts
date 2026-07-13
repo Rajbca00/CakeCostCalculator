@@ -1,50 +1,5 @@
-import { z } from 'zod';
 import type { AppData } from '../types';
-
-const UnitSchema = z.enum(['g', 'kg', 'oz', 'lb', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'piece']);
-
-const IngredientSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  purchaseCost: z.number(),
-  purchaseQuantity: z.number(),
-  purchaseUnit: UnitSchema,
-  notes: z.string().optional(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-});
-
-const RecipeIngredientLineSchema = z.object({
-  id: z.string(),
-  ingredientId: z.string(),
-  quantity: z.number(),
-  unit: UnitSchema,
-});
-
-const ExtraCostSchema = z.object({
-  id: z.string(),
-  label: z.string(),
-  amount: z.number(),
-  scalesWithYield: z.boolean(),
-});
-
-const RecipeSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  baseYieldQuantity: z.number(),
-  baseYieldLabel: z.string(),
-  ingredientLines: z.array(RecipeIngredientLineSchema),
-  extraCosts: z.array(ExtraCostSchema),
-  notes: z.string().optional(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-});
-
-export const AppDataImportSchema = z.object({
-  schemaVersion: z.literal(1),
-  ingredients: z.array(IngredientSchema),
-  recipes: z.array(RecipeSchema),
-});
+import { AppDataImportSchema } from './schemas';
 
 export interface ImportValidationResult {
   success: boolean;

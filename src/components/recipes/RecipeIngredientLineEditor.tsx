@@ -65,12 +65,15 @@ export function RecipeIngredientLineEditor({
         const ingredient = ingredientsById.get(line.ingredientId);
         const category = ingredient ? getUnitCategory(ingredient.purchaseUnit) : 'weight';
         return (
-          <div key={line.id} className="flex items-end gap-2 rounded-md border border-slate-200 p-2">
+          <div
+            key={line.id}
+            className="flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-2"
+          >
             <Select
               label="Ingredient"
               value={line.ingredientId}
               onChange={(e) => handleIngredientChange(line, e.target.value)}
-              className="min-w-[10rem]"
+              className="min-w-[10rem] flex-1 sm:flex-none"
             >
               {ingredients.map((i) => (
                 <option key={i.id} value={i.id}>

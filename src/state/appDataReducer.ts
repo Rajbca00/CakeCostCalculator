@@ -1,4 +1,4 @@
-import { type AppData, type Ingredient, type Recipe, createEmptyAppData } from '../types';
+import { type AppData, type Ingredient, type Recipe } from '../types';
 
 export type AppDataAction =
   | { type: 'LOAD'; data: AppData }
@@ -39,8 +39,4 @@ export function appDataReducer(state: AppData, action: AppDataAction): AppData {
     default:
       return state;
   }
-}
-
-export function initAppDataState(): AppData {
-  return createEmptyAppData();
 }

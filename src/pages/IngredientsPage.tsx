@@ -58,7 +58,7 @@ export function IngredientsPage() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       const result = parseImportedAppData(String(reader.result));
       if (!result.success || !result.data) {
         showToast(result.error ?? 'Import failed.', 'error');
@@ -69,17 +69,21 @@ export function IngredientsPage() {
         `This will replace ${current.ingredients.length} ingredients and ${current.recipes.length} recipes with ${result.data.ingredients.length} ingredients and ${result.data.recipes.length} recipes from the file. Continue?`,
       );
       if (!confirmed) return;
-      replaceAllData(result.data);
-      showToast('Data imported successfully.', 'success');
+      try {
+        await replaceAllData(result.data);
+        showToast('Data imported successfully.', 'success');
+      } catch {
+        showToast('Import failed while saving to the server. Please try again.', 'error');
+      }
     };
     reader.readAsText(file);
   }
 
   return (
     <PageContainer>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-semibold text-slate-900">Ingredients</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={() => exportAppData(getSnapshot())}>
             Export
           </Button>

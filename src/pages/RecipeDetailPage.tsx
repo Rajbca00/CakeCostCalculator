@@ -114,8 +114,8 @@ export function RecipeDetailPage() {
 
   return (
     <PageContainer>
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="min-w-0 truncate text-xl font-semibold text-slate-900">
           {isNew ? 'New recipe' : recipe?.name || 'Recipe'}
         </h1>
         <Button variant="secondary" onClick={() => navigate('/recipes')}>

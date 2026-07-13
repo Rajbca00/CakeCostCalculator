@@ -28,13 +28,16 @@ export function ExtraCostEditor({ extraCosts, onChange }: ExtraCostEditorProps) 
   return (
     <div className="flex flex-col gap-2">
       {extraCosts.map((cost) => (
-        <div key={cost.id} className="flex items-end gap-2 rounded-md border border-slate-200 p-2">
+        <div
+          key={cost.id}
+          className="flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-2"
+        >
           <TextInput
             label="Label"
             value={cost.label}
             onChange={(e) => updateCost(cost.id, { label: e.target.value })}
             placeholder="e.g. Box + packaging"
-            className="min-w-[10rem]"
+            className="min-w-[10rem] flex-1 sm:flex-none"
           />
           <MoneyInput
             label="Amount"

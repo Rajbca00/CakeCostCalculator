@@ -33,7 +33,7 @@ export function NumberInput({
         placeholder={placeholder}
         value={Number.isFinite(value) ? value : ''}
         onChange={(e) => onValueChange(e.target.value === '' ? NaN : Number(e.target.value))}
-        className={`rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-400 ${
+        className={`rounded-md border bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-400 ${
           error ? 'border-red-400' : 'border-slate-300'
         } ${className}`}
       />

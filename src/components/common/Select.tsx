@@ -11,7 +11,7 @@ export function Select({ label, error, className = '', children, id, ...props }:
       {label && <span className="font-medium text-slate-700">{label}</span>}
       <select
         id={id}
-        className={`rounded-md border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-400 ${
+        className={`rounded-md border bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-400 ${
           error ? 'border-red-400' : 'border-slate-300'
         } ${className}`}
         {...props}

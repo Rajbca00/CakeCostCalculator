@@ -11,7 +11,7 @@ export function HomePage() {
           Track what you pay for ingredients, then cost out your cake recipes automatically —
           and see the cost for any batch size.
         </p>
-        <div className="mt-2 flex gap-3">
+        <div className="mt-2 flex flex-wrap justify-center gap-3">
           <Link to="/ingredients">
             <Button variant="secondary">Manage ingredients</Button>
           </Link>
