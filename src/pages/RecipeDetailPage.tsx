@@ -27,6 +27,7 @@ import {
   isRecipeNameUnique,
 } from '../lib/validation';
 import { cloneRecipeWithName } from '../lib/recipeClone';
+import { useToast } from '../components/layout/Toast';
 
 interface DraftState {
   name: string;
@@ -59,6 +60,7 @@ export function RecipeDetailPage() {
   const ingredientsById = useIngredientsById();
   const recipes = useRecipes();
   const { addRecipe, updateRecipe } = useAppDataContext();
+  const { showToast } = useToast();
 
   const [draft, setDraft] = useState<DraftState>(() => draftFromRecipe(recipe));
   const [touched, setTouched] = useState(false);
@@ -113,6 +115,7 @@ export function RecipeDetailPage() {
     const cloned = cloneRecipeWithName(recipe, newName);
     addRecipe(cloned);
     setCloning(false);
+    showToast(`Cloned as "${cloned.name}"`, 'success');
     navigate(`/recipes/${cloned.id}`);
   }
 
@@ -136,8 +139,10 @@ export function RecipeDetailPage() {
 
     if (recipe) {
       updateRecipe(saved);
+      showToast(`"${saved.name}" updated`, 'success');
     } else {
       addRecipe(saved);
+      showToast(`"${saved.name}" created`, 'success');
       navigate(`/recipes/${saved.id}`, { replace: true });
     }
   }

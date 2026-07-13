@@ -9,6 +9,7 @@ import { CloneRecipeDialog } from '../components/recipes/CloneRecipeDialog';
 import { useAppDataContext, useRecipes } from '../state/useAppData';
 import type { Recipe } from '../types';
 import { cloneRecipeWithName } from '../lib/recipeClone';
+import { useToast } from '../components/layout/Toast';
 
 export function RecipesPage() {
   const recipes = useRecipes();
@@ -16,12 +17,14 @@ export function RecipesPage() {
   const [pendingDelete, setPendingDelete] = useState<Recipe | undefined>(undefined);
   const [cloningRecipe, setCloningRecipe] = useState<Recipe | undefined>(undefined);
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   function handleConfirmClone(newName: string) {
     if (!cloningRecipe) return;
     const cloned = cloneRecipeWithName(cloningRecipe, newName);
     addRecipe(cloned);
     setCloningRecipe(undefined);
+    showToast(`Cloned as "${cloned.name}"`, 'success');
     navigate(`/recipes/${cloned.id}`);
   }
 
