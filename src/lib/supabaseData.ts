@@ -19,7 +19,6 @@ interface RecipeRow {
   name: string;
   base_yield_quantity: number;
   base_yield_label: string;
-  base_servings: number | null;
   profit_percent: number;
   ingredient_lines: RecipeIngredientLine[];
   extra_costs: ExtraCost[];
@@ -61,7 +60,6 @@ function rowToRecipe(row: RecipeRow): Recipe {
     name: row.name,
     baseYieldQuantity: row.base_yield_quantity,
     baseYieldLabel: row.base_yield_label,
-    baseServings: row.base_servings ?? undefined,
     profitPercent: row.profit_percent ?? 0,
     ingredientLines: row.ingredient_lines,
     extraCosts: row.extra_costs,
@@ -78,7 +76,6 @@ function recipeToRow(userId: string, recipe: Recipe): RecipeRow {
     name: recipe.name,
     base_yield_quantity: recipe.baseYieldQuantity,
     base_yield_label: recipe.baseYieldLabel,
-    base_servings: recipe.baseServings ?? null,
     profit_percent: recipe.profitPercent,
     ingredient_lines: recipe.ingredientLines,
     extra_costs: recipe.extraCosts,

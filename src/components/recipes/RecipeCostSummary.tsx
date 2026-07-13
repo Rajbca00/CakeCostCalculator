@@ -1,5 +1,5 @@
 import type { RecipeCostResult } from '../../lib/costCalculations';
-import { formatCurrency, formatQuantity, formatUnitCost } from '../../lib/format';
+import { formatCurrency, formatUnitCost } from '../../lib/format';
 
 interface RecipeCostSummaryProps {
   result: RecipeCostResult;
@@ -33,12 +33,6 @@ export function RecipeCostSummary({ result, yieldLabel }: RecipeCostSummaryProps
         </span>
         <span>{formatUnitCost(result.costPerYieldUnit)}</span>
       </div>
-      {result.servings !== undefined && (
-        <div className="flex justify-between py-1 text-slate-600">
-          <span>Cost per serving ({formatQuantity(result.servings)} servings)</span>
-          <span>{formatUnitCost(result.costPerServing ?? 0)}</span>
-        </div>
-      )}
 
       {result.profitPercent > 0 && (
         <>
@@ -54,12 +48,6 @@ export function RecipeCostSummary({ result, yieldLabel }: RecipeCostSummaryProps
             <span>Selling price per {yieldLabel || 'unit'}</span>
             <span>{formatUnitCost(result.sellingPricePerYieldUnit)}</span>
           </div>
-          {result.servings !== undefined && (
-            <div className="flex justify-between py-1 text-emerald-700">
-              <span>Selling price per serving</span>
-              <span>{formatUnitCost(result.sellingPricePerServing ?? 0)}</span>
-            </div>
-          )}
         </>
       )}
     </div>

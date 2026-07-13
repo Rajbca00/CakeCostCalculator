@@ -24,8 +24,8 @@ export function RecipeCard({ recipe, onClone, onDelete }: RecipeCardProps) {
         <p className="text-sm text-slate-500">
           {recipe.baseYieldQuantity} {recipe.baseYieldLabel} · {formatCurrency(result.total)} total ·{' '}
           {formatUnitCost(result.costPerYieldUnit)} / {recipe.baseYieldLabel}
-          {result.servings !== undefined && result.sellingPricePerServing !== undefined && (
-            <> · {formatUnitCost(result.sellingPricePerServing)} / serving</>
+          {result.profitPercent > 0 && (
+            <> · sells for {formatUnitCost(result.sellingPricePerYieldUnit)} / {recipe.baseYieldLabel}</>
           )}
           {result.hasMissingIngredients && (
             <span className="ml-2 text-amber-600">⚠ missing ingredient</span>

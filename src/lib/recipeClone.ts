@@ -22,7 +22,6 @@ export function cloneRecipeWithName(source: Recipe, newName: string): Recipe {
     name: newName.trim(),
     baseYieldQuantity: source.baseYieldQuantity,
     baseYieldLabel: source.baseYieldLabel,
-    baseServings: source.baseServings,
     profitPercent: source.profitPercent,
     ingredientLines: source.ingredientLines.map((line) => ({ ...line, id: generateId() })),
     extraCosts: source.extraCosts.map((cost) => ({ ...cost, id: generateId() })),

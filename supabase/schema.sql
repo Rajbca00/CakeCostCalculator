@@ -18,7 +18,6 @@ create table if not exists recipes (
   name text not null,
   base_yield_quantity numeric not null,
   base_yield_label text not null,
-  base_servings numeric,
   profit_percent numeric not null default 0,
   ingredient_lines jsonb not null default '[]',
   extra_costs jsonb not null default '[]',
@@ -27,10 +26,13 @@ create table if not exists recipes (
   updated_at timestamptz not null
 );
 
--- Migration for projects created before base_servings/profit_percent existed.
--- Safe to re-run: no-ops if the columns are already present.
-alter table recipes add column if not exists base_servings numeric;
+-- Migration for projects created before profit_percent existed.
+-- Safe to re-run: no-ops if the column is already present.
 alter table recipes add column if not exists profit_percent numeric not null default 0;
+
+-- If you already ran an earlier version of this file that added base_servings,
+-- that column is now unused and harmless to leave. Drop it manually if you want:
+-- alter table recipes drop column if exists base_servings;
 
 create index if not exists ingredients_user_id_idx on ingredients(user_id);
 create index if not exists recipes_user_id_idx on recipes(user_id);

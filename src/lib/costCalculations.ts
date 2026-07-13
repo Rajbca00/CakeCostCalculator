@@ -45,10 +45,6 @@ export interface RecipeCostResult {
   profitPercent: number;
   sellingTotal: number;
   sellingPricePerYieldUnit: number;
-  /** Present only when the recipe has a baseServings figure to scale from. */
-  servings?: number;
-  costPerServing?: number;
-  sellingPricePerServing?: number;
 }
 
 export function calculateRecipeCost(
@@ -90,9 +86,6 @@ export function calculateRecipeCost(
   const profitPercent = recipe.profitPercent || 0;
   const sellingTotal = total * (1 + profitPercent / 100);
 
-  const servings =
-    recipe.baseServings && recipe.baseServings > 0 ? recipe.baseServings * multiplier : undefined;
-
   return {
     lines,
     extraCosts,
@@ -105,8 +98,5 @@ export function calculateRecipeCost(
     profitPercent,
     sellingTotal,
     sellingPricePerYieldUnit: yieldQuantity > 0 ? sellingTotal / yieldQuantity : 0,
-    servings,
-    costPerServing: servings ? total / servings : undefined,
-    sellingPricePerServing: servings ? sellingTotal / servings : undefined,
   };
 }
