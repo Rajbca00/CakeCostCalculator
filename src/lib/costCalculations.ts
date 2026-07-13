@@ -2,6 +2,10 @@ import { getUnitCategory, toBaseUnit } from './units';
 import { normalizeGroupName } from './recipeGroups';
 import type { Ingredient, Recipe, RecipeIngredientLine } from '../types';
 
+export function round2(amount: number): number {
+  return Math.round((amount + Number.EPSILON) * 100) / 100;
+}
+
 export function costPerBaseUnit(ingredient: Ingredient): number {
   const qtyInBase = toBaseUnit(ingredient.purchaseQuantity, ingredient.purchaseUnit);
   if (!Number.isFinite(qtyInBase) || qtyInBase <= 0) return 0;
@@ -90,13 +94,20 @@ export function calculateRecipeCost(
       groupName: normalizeGroupName(e.groupName),
     }));
 
-  const ingredientsTotal = lines.reduce((sum, l) => sum + l.cost, 0);
-  const extrasTotal = extraCosts.reduce((sum, e) => sum + e.amount, 0);
-  const total = ingredientsTotal + extrasTotal;
+  // Round subtotals to the cent before combining them, and derive every
+  // downstream figure (total, selling price, profit) from those rounded
+  // values. This guarantees the displayed figures actually add up for a
+  // user checking with a calculator — e.g. ingredientsTotal + extrasTotal
+  // always equals total exactly, and total + profitAmount always equals
+  // sellingTotal exactly, instead of drifting a cent apart because each
+  // was rounded independently from full floating-point precision.
+  const ingredientsTotal = round2(lines.reduce((sum, l) => sum + l.cost, 0));
+  const extrasTotal = round2(extraCosts.reduce((sum, e) => sum + e.amount, 0));
+  const total = round2(ingredientsTotal + extrasTotal);
   const yieldQuantity = recipe.baseYieldQuantity * multiplier;
 
   const profitPercent = recipe.profitPercent || 0;
-  const sellingTotal = total * (1 + profitPercent / 100);
+  const sellingTotal = round2(total * (1 + profitPercent / 100));
 
   return {
     lines,
@@ -110,6 +121,6 @@ export function calculateRecipeCost(
     profitPercent,
     sellingTotal,
     sellingPricePerYieldUnit: yieldQuantity > 0 ? sellingTotal / yieldQuantity : 0,
-    profitAmount: sellingTotal - total,
+    profitAmount: round2(sellingTotal - total),
   };
 }

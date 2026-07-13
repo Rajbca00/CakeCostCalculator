@@ -1,4 +1,9 @@
-import type { RecipeCostExtraResult, RecipeCostLineResult, RecipeCostResult } from '../../lib/costCalculations';
+import {
+  round2,
+  type RecipeCostExtraResult,
+  type RecipeCostLineResult,
+  type RecipeCostResult,
+} from '../../lib/costCalculations';
 import { UNIT_LABELS } from '../../lib/units';
 import type { Unit } from '../../types';
 import { formatCurrency, formatQuantity } from '../../lib/format';
@@ -87,8 +92,9 @@ export function ScaledIngredientTable({ result, groupBy = false }: ScaledIngredi
       {order.map((group) => {
         const lines = linesByGroup.get(group) ?? [];
         const extras = extrasByGroup.get(group) ?? [];
-        const subtotal =
-          lines.reduce((sum, l) => sum + l.cost, 0) + extras.reduce((sum, e) => sum + e.amount, 0);
+        const subtotal = round2(
+          lines.reduce((sum, l) => sum + l.cost, 0) + extras.reduce((sum, e) => sum + e.amount, 0),
+        );
         return (
           <div key={group} className="overflow-hidden rounded-lg border border-slate-200">
             <div className="flex items-center justify-between bg-slate-100 px-4 py-2">
