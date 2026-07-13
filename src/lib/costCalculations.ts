@@ -41,6 +41,14 @@ export interface RecipeCostResult {
   yieldQuantity: number;
   costPerYieldUnit: number;
   hasMissingIngredients: boolean;
+  /** Markup % applied on top of cost, e.g. 30 means sell at cost * 1.30. */
+  profitPercent: number;
+  sellingTotal: number;
+  sellingPricePerYieldUnit: number;
+  /** Present only when the recipe has a baseServings figure to scale from. */
+  servings?: number;
+  costPerServing?: number;
+  sellingPricePerServing?: number;
 }
 
 export function calculateRecipeCost(
@@ -79,6 +87,12 @@ export function calculateRecipeCost(
   const total = ingredientsTotal + extrasTotal;
   const yieldQuantity = recipe.baseYieldQuantity * multiplier;
 
+  const profitPercent = recipe.profitPercent || 0;
+  const sellingTotal = total * (1 + profitPercent / 100);
+
+  const servings =
+    recipe.baseServings && recipe.baseServings > 0 ? recipe.baseServings * multiplier : undefined;
+
   return {
     lines,
     extraCosts,
@@ -88,5 +102,11 @@ export function calculateRecipeCost(
     yieldQuantity,
     costPerYieldUnit: yieldQuantity > 0 ? total / yieldQuantity : 0,
     hasMissingIngredients: lines.some((l) => l.missingIngredient),
+    profitPercent,
+    sellingTotal,
+    sellingPricePerYieldUnit: yieldQuantity > 0 ? sellingTotal / yieldQuantity : 0,
+    servings,
+    costPerServing: servings ? total / servings : undefined,
+    sellingPricePerServing: servings ? sellingTotal / servings : undefined,
   };
 }

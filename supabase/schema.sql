@@ -18,12 +18,19 @@ create table if not exists recipes (
   name text not null,
   base_yield_quantity numeric not null,
   base_yield_label text not null,
+  base_servings numeric,
+  profit_percent numeric not null default 0,
   ingredient_lines jsonb not null default '[]',
   extra_costs jsonb not null default '[]',
   notes text,
   created_at timestamptz not null,
   updated_at timestamptz not null
 );
+
+-- Migration for projects created before base_servings/profit_percent existed.
+-- Safe to re-run: no-ops if the columns are already present.
+alter table recipes add column if not exists base_servings numeric;
+alter table recipes add column if not exists profit_percent numeric not null default 0;
 
 create index if not exists ingredients_user_id_idx on ingredients(user_id);
 create index if not exists recipes_user_id_idx on recipes(user_id);

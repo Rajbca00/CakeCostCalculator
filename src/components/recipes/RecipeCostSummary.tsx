@@ -1,5 +1,5 @@
 import type { RecipeCostResult } from '../../lib/costCalculations';
-import { formatCurrency, formatUnitCost } from '../../lib/format';
+import { formatCurrency, formatQuantity, formatUnitCost } from '../../lib/format';
 
 interface RecipeCostSummaryProps {
   result: RecipeCostResult;
@@ -23,8 +23,8 @@ export function RecipeCostSummary({ result, yieldLabel }: RecipeCostSummaryProps
         <span className="text-slate-600">Extras subtotal</span>
         <span className="font-medium">{formatCurrency(result.extrasTotal)}</span>
       </div>
-      <div className="mt-1 flex justify-between border-t border-slate-200 py-1 pt-2">
-        <span className="font-semibold text-slate-900">Total</span>
+      <div className="flex justify-between border-t border-slate-200 py-1 pt-2">
+        <span className="font-semibold text-slate-900">Cost total</span>
         <span className="font-semibold text-slate-900">{formatCurrency(result.total)}</span>
       </div>
       <div className="flex justify-between py-1 text-slate-600">
@@ -33,6 +33,35 @@ export function RecipeCostSummary({ result, yieldLabel }: RecipeCostSummaryProps
         </span>
         <span>{formatUnitCost(result.costPerYieldUnit)}</span>
       </div>
+      {result.servings !== undefined && (
+        <div className="flex justify-between py-1 text-slate-600">
+          <span>Cost per serving ({formatQuantity(result.servings)} servings)</span>
+          <span>{formatUnitCost(result.costPerServing ?? 0)}</span>
+        </div>
+      )}
+
+      {result.profitPercent > 0 && (
+        <>
+          <div className="mt-2 flex justify-between border-t border-slate-200 py-1 pt-2">
+            <span className="font-semibold text-emerald-700">
+              Selling price total ({result.profitPercent}% profit)
+            </span>
+            <span className="font-semibold text-emerald-700">
+              {formatCurrency(result.sellingTotal)}
+            </span>
+          </div>
+          <div className="flex justify-between py-1 text-emerald-700">
+            <span>Selling price per {yieldLabel || 'unit'}</span>
+            <span>{formatUnitCost(result.sellingPricePerYieldUnit)}</span>
+          </div>
+          {result.servings !== undefined && (
+            <div className="flex justify-between py-1 text-emerald-700">
+              <span>Selling price per serving</span>
+              <span>{formatUnitCost(result.sellingPricePerServing ?? 0)}</span>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

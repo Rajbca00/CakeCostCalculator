@@ -3,6 +3,7 @@ import { NumberInput } from '../common/NumberInput';
 interface RecipeScalePanelProps {
   baseYieldQuantity: number;
   baseYieldLabel: string;
+  baseServings?: number;
   multiplier: number;
   onMultiplierChange: (multiplier: number) => void;
 }
@@ -10,14 +11,21 @@ interface RecipeScalePanelProps {
 export function RecipeScalePanel({
   baseYieldQuantity,
   baseYieldLabel,
+  baseServings,
   multiplier,
   onMultiplierChange,
 }: RecipeScalePanelProps) {
   const targetYield = baseYieldQuantity * multiplier;
+  const targetServings = baseServings ? baseServings * multiplier : undefined;
 
   function handleTargetYieldChange(value: number) {
     if (!Number.isFinite(value) || baseYieldQuantity <= 0) return;
     onMultiplierChange(value / baseYieldQuantity);
+  }
+
+  function handleTargetServingsChange(value: number) {
+    if (!Number.isFinite(value) || !baseServings || baseServings <= 0) return;
+    onMultiplierChange(value / baseServings);
   }
 
   return (
@@ -29,6 +37,15 @@ export function RecipeScalePanel({
         min={0}
         className="w-32"
       />
+      {baseServings !== undefined && (
+        <NumberInput
+          label="Target servings"
+          value={targetServings ?? NaN}
+          onValueChange={handleTargetServingsChange}
+          min={0}
+          className="w-28"
+        />
+      )}
       <NumberInput
         label="Multiplier"
         value={multiplier}
@@ -38,6 +55,7 @@ export function RecipeScalePanel({
       />
       <p className="text-sm text-slate-500">
         Base recipe: {baseYieldQuantity} {baseYieldLabel}
+        {baseServings !== undefined ? ` · ${baseServings} servings` : ''}
       </p>
     </div>
   );

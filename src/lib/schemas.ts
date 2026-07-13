@@ -32,6 +32,8 @@ export const RecipeSchema = z.object({
   name: z.string(),
   baseYieldQuantity: z.number(),
   baseYieldLabel: z.string(),
+  baseServings: z.number().optional(),
+  profitPercent: z.number().default(0),
   ingredientLines: z.array(RecipeIngredientLineSchema),
   extraCosts: z.array(ExtraCostSchema),
   notes: z.string().optional(),

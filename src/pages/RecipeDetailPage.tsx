@@ -20,13 +20,20 @@ import {
 import type { ExtraCost, Recipe, RecipeIngredientLine } from '../types';
 import { generateId } from '../lib/id';
 import { calculateRecipeCost } from '../lib/costCalculations';
-import { isNonEmptyString, isPositiveNumber, isRecipeNameUnique } from '../lib/validation';
+import {
+  isNonEmptyString,
+  isNonNegativeNumber,
+  isPositiveNumber,
+  isRecipeNameUnique,
+} from '../lib/validation';
 import { cloneRecipeWithName } from '../lib/recipeClone';
 
 interface DraftState {
   name: string;
   baseYieldQuantity: number;
   baseYieldLabel: string;
+  baseServings: number;
+  profitPercent: number;
   ingredientLines: RecipeIngredientLine[];
   extraCosts: ExtraCost[];
   notes: string;
@@ -37,6 +44,8 @@ function draftFromRecipe(recipe?: Recipe): DraftState {
     name: recipe?.name ?? '',
     baseYieldQuantity: recipe?.baseYieldQuantity ?? 1,
     baseYieldLabel: recipe?.baseYieldLabel ?? 'servings',
+    baseServings: recipe?.baseServings ?? NaN,
+    profitPercent: recipe?.profitPercent ?? NaN,
     ingredientLines: recipe?.ingredientLines ?? [],
     extraCosts: recipe?.extraCosts ?? [],
     notes: recipe?.notes ?? '',
@@ -65,6 +74,8 @@ export function RecipeDetailPage() {
       name: draft.name,
       baseYieldQuantity: draft.baseYieldQuantity,
       baseYieldLabel: draft.baseYieldLabel,
+      baseServings: isPositiveNumber(draft.baseServings) ? draft.baseServings : undefined,
+      profitPercent: isNonNegativeNumber(draft.profitPercent) ? draft.profitPercent : 0,
       ingredientLines: draft.ingredientLines,
       extraCosts: draft.extraCosts,
       notes: draft.notes,
@@ -93,6 +104,14 @@ export function RecipeDetailPage() {
     baseYieldQuantity: isPositiveNumber(draft.baseYieldQuantity)
       ? undefined
       : 'Enter a yield greater than 0',
+    baseServings:
+      Number.isNaN(draft.baseServings) || isPositiveNumber(draft.baseServings)
+        ? undefined
+        : 'Enter a value greater than 0, or leave blank',
+    profitPercent:
+      Number.isNaN(draft.profitPercent) || isNonNegativeNumber(draft.profitPercent)
+        ? undefined
+        : 'Enter 0 or a positive percentage',
   };
   const hasErrors = Object.values(errors).some(Boolean);
 
@@ -114,6 +133,8 @@ export function RecipeDetailPage() {
       name: draft.name.trim(),
       baseYieldQuantity: draft.baseYieldQuantity,
       baseYieldLabel: draft.baseYieldLabel.trim() || 'servings',
+      baseServings: isPositiveNumber(draft.baseServings) ? draft.baseServings : undefined,
+      profitPercent: isNonNegativeNumber(draft.profitPercent) ? draft.profitPercent : 0,
       ingredientLines: draft.ingredientLines,
       extraCosts: draft.extraCosts,
       notes: draft.notes.trim() || undefined,
@@ -202,6 +223,25 @@ export function RecipeDetailPage() {
             />
           </div>
 
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <NumberInput
+              label="Servings (optional)"
+              value={draft.baseServings}
+              onValueChange={(v) => setDraft((d) => ({ ...d, baseServings: v }))}
+              error={touched ? errors.baseServings : undefined}
+              min={0}
+              placeholder="e.g. 6"
+            />
+            <NumberInput
+              label="Profit % (optional)"
+              value={draft.profitPercent}
+              onValueChange={(v) => setDraft((d) => ({ ...d, profitPercent: v }))}
+              error={touched ? errors.profitPercent : undefined}
+              min={0}
+              placeholder="e.g. 30"
+            />
+          </div>
+
           <div>
             <h2 className="mb-2 text-sm font-semibold text-slate-800">Ingredients</h2>
             <RecipeIngredientLineEditor
@@ -236,6 +276,7 @@ export function RecipeDetailPage() {
             <RecipeScalePanel
               baseYieldQuantity={recipe.baseYieldQuantity}
               baseYieldLabel={recipe.baseYieldLabel}
+              baseServings={recipe.baseServings}
               multiplier={multiplier}
               onMultiplierChange={setMultiplier}
             />
