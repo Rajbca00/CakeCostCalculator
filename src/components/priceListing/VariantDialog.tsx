@@ -108,7 +108,7 @@ export function VariantDialog({
       title={editingVariant ? 'Edit menu item' : 'Add menu item'}
       onClose={onClose}
     >
-      <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
+      <form className="flex flex-col gap-3" onSubmit={handleSubmit} noValidate>
         <Select
           label="Recipe"
           value={recipeId}
