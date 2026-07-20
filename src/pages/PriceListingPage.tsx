@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { PageContainer } from '../components/layout/PageContainer';
 import { EmptyState } from '../components/layout/EmptyState';
 import { ConfirmDialog } from '../components/layout/ConfirmDialog';
+import { DataBackupControls } from '../components/layout/DataBackupControls';
 import { Button } from '../components/common/Button';
 import { VariantDialog, type VariantDialogInput } from '../components/priceListing/VariantDialog';
 import { PriceListingMenu } from '../components/priceListing/PriceListingMenu';
@@ -119,9 +120,12 @@ export function PriceListingPage() {
     <PageContainer>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold text-slate-900">Price Listing</h1>
-        <Button onClick={handleOpenAdd} disabled={recipes.length === 0}>
-          Add menu item
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <DataBackupControls />
+          <Button onClick={handleOpenAdd} disabled={recipes.length === 0}>
+            Add menu item
+          </Button>
+        </div>
       </div>
 
       {recipes.length === 0 ? (
