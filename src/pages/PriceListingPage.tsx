@@ -4,7 +4,7 @@ import { PageContainer } from '../components/layout/PageContainer';
 import { EmptyState } from '../components/layout/EmptyState';
 import { ConfirmDialog } from '../components/layout/ConfirmDialog';
 import { Button } from '../components/common/Button';
-import { AddVariantDialog, type AddVariantInput } from '../components/priceListing/AddVariantDialog';
+import { VariantDialog, type VariantDialogInput } from '../components/priceListing/VariantDialog';
 import { PriceListingMenu } from '../components/priceListing/PriceListingMenu';
 import {
   useAppDataContext,
@@ -24,11 +24,13 @@ export function PriceListingPage() {
   const recipes = useRecipes();
   const ingredientsById = useIngredientsById();
   const variants = usePriceListingVariants();
-  const { addPriceListingVariant, deletePriceListingVariant } = useAppDataContext();
+  const { addPriceListingVariant, updatePriceListingVariant, deletePriceListingVariant } =
+    useAppDataContext();
   const { showToast } = useToast();
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [adding, setAdding] = useState(false);
+  const [editingVariant, setEditingVariant] = useState<PriceListingVariant | undefined>(undefined);
+  const [saving, setSaving] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<PriceListingVariant | undefined>(undefined);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -40,25 +42,45 @@ export function PriceListingPage() {
     [variants, recipesById],
   );
 
-  async function handleConfirmAdd(input: AddVariantInput) {
-    const now = new Date().toISOString();
-    const variant: PriceListingVariant = {
-      id: generateId(),
-      recipeId: input.recipeId,
-      name: input.name,
-      groupNames: input.groupNames,
-      multiplier: input.multiplier,
-      createdAt: now,
-      updatedAt: now,
-    };
-    setAdding(true);
+  function handleOpenAdd() {
+    setEditingVariant(undefined);
+    setDialogOpen(true);
+  }
+
+  function handleOpenEdit(variant: PriceListingVariant) {
+    setEditingVariant(variant);
+    setDialogOpen(true);
+  }
+
+  async function handleConfirmSave(input: VariantDialogInput) {
+    setSaving(true);
     try {
-      await addPriceListingVariant(variant);
+      if (editingVariant) {
+        await updatePriceListingVariant({
+          ...editingVariant,
+          recipeId: input.recipeId,
+          name: input.name,
+          groupNames: input.groupNames,
+          multiplier: input.multiplier,
+          updatedAt: new Date().toISOString(),
+        });
+      } else {
+        const now = new Date().toISOString();
+        await addPriceListingVariant({
+          id: generateId(),
+          recipeId: input.recipeId,
+          name: input.name,
+          groupNames: input.groupNames,
+          multiplier: input.multiplier,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
       setDialogOpen(false);
     } catch {
       // failure toast already shown; keep dialog open so the user can retry
     } finally {
-      setAdding(false);
+      setSaving(false);
     }
   }
 
@@ -97,7 +119,7 @@ export function PriceListingPage() {
     <PageContainer>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold text-slate-900">Price Listing</h1>
-        <Button onClick={() => setDialogOpen(true)} disabled={recipes.length === 0}>
+        <Button onClick={handleOpenAdd} disabled={recipes.length === 0}>
           Add menu item
         </Button>
       </div>
@@ -112,7 +134,7 @@ export function PriceListingPage() {
         <EmptyState
           title="No menu items yet"
           description="Add a menu item to pick a recipe and a combination of its groups, e.g. base cake + a specific icing."
-          action={<Button onClick={() => setDialogOpen(true)}>Add your first menu item</Button>}
+          action={<Button onClick={handleOpenAdd}>Add your first menu item</Button>}
         />
       ) : (
         <div className="flex flex-col gap-5">
@@ -134,13 +156,14 @@ export function PriceListingPage() {
                       )}
                     </p>
                   </div>
-                  <Button
-                    variant="danger"
-                    className="self-start sm:self-auto"
-                    onClick={() => setPendingDelete(variant)}
-                  >
-                    Delete
-                  </Button>
+                  <div className="flex shrink-0 gap-2">
+                    <Button variant="secondary" onClick={() => handleOpenEdit(variant)}>
+                      Edit
+                    </Button>
+                    <Button variant="danger" onClick={() => setPendingDelete(variant)}>
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               );
             })}
@@ -163,12 +186,13 @@ export function PriceListingPage() {
         </div>
       )}
 
-      <AddVariantDialog
+      <VariantDialog
         open={dialogOpen}
         recipes={recipes}
-        confirming={adding}
+        editingVariant={editingVariant}
+        confirming={saving}
         onClose={() => setDialogOpen(false)}
-        onConfirm={handleConfirmAdd}
+        onConfirm={handleConfirmSave}
       />
 
       <ConfirmDialog
