@@ -2,36 +2,38 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Modal } from '../layout/Modal';
 import { Select } from '../common/Select';
 import { TextInput } from '../common/TextInput';
-import { NumberInput } from '../common/NumberInput';
 import { Button } from '../common/Button';
 import { RecipeGroupFilter } from '../scaling/RecipeGroupFilter';
+import { RecipeScalePanel } from '../scaling/RecipeScalePanel';
 import { getGroupNames } from '../../lib/recipeGroups';
 import { suggestVariantName } from '../../lib/priceListing';
 import { isNonEmptyString, isPositiveNumber } from '../../lib/validation';
-import type { Recipe } from '../../types';
+import type { PriceListingVariant, Recipe } from '../../types';
 
-export interface AddVariantInput {
+export interface VariantDialogInput {
   recipeId: string;
   name: string;
   groupNames: string[];
   multiplier: number;
 }
 
-interface AddVariantDialogProps {
+interface VariantDialogProps {
   open: boolean;
   recipes: Recipe[];
+  editingVariant?: PriceListingVariant;
   confirming?: boolean;
   onClose: () => void;
-  onConfirm: (input: AddVariantInput) => void;
+  onConfirm: (input: VariantDialogInput) => void;
 }
 
-export function AddVariantDialog({
+export function VariantDialog({
   open,
   recipes,
+  editingVariant,
   confirming = false,
   onClose,
   onConfirm,
-}: AddVariantDialogProps) {
+}: VariantDialogProps) {
   const [recipeId, setRecipeId] = useState('');
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
   const [multiplier, setMultiplier] = useState(1);
@@ -41,19 +43,30 @@ export function AddVariantDialog({
 
   useEffect(() => {
     if (!open) return;
-    setRecipeId(recipes[0]?.id ?? '');
-    setMultiplier(1);
-    setNameEdited(false);
+    if (editingVariant) {
+      setRecipeId(editingVariant.recipeId);
+      setSelectedGroups(new Set(editingVariant.groupNames));
+      setMultiplier(editingVariant.multiplier);
+      setName(editingVariant.name);
+      setNameEdited(true);
+    } else {
+      setRecipeId(recipes[0]?.id ?? '');
+      setMultiplier(1);
+      setNameEdited(false);
+    }
     setTouched(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, editingVariant?.id]);
 
   const recipe = useMemo(() => recipes.find((r) => r.id === recipeId), [recipes, recipeId]);
   const groupNames = useMemo(() => (recipe ? getGroupNames(recipe) : []), [recipe]);
 
   useEffect(() => {
+    // Only reset groups/yield when the user actively switches recipes, not on initial open for edit.
+    if (!open || recipeId === editingVariant?.recipeId) return;
     const r = recipes.find((rr) => rr.id === recipeId);
     setSelectedGroups(new Set(r ? getGroupNames(r) : []));
+    setMultiplier(1);
     setNameEdited(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recipeId]);
@@ -73,7 +86,7 @@ export function AddVariantDialog({
     recipe: recipe ? undefined : 'Choose a recipe',
     groups: selectedGroups.size > 0 ? undefined : 'Select at least one group',
     name: isNonEmptyString(name) ? undefined : 'Name is required',
-    multiplier: isPositiveNumber(multiplier) ? undefined : 'Enter a scale greater than 0',
+    multiplier: isPositiveNumber(multiplier) ? undefined : 'Enter a yield greater than 0',
   };
   const hasErrors = Object.values(errors).some(Boolean);
 
@@ -90,7 +103,11 @@ export function AddVariantDialog({
   }
 
   return (
-    <Modal open={open} title="Add menu item" onClose={onClose}>
+    <Modal
+      open={open}
+      title={editingVariant ? 'Edit menu item' : 'Add menu item'}
+      onClose={onClose}
+    >
       <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
         <Select
           label="Recipe"
@@ -121,13 +138,17 @@ export function AddVariantDialog({
           </div>
         )}
 
-        <NumberInput
-          label="Scale (×)"
-          value={multiplier}
-          onValueChange={setMultiplier}
-          min={0}
-          error={touched ? errors.multiplier : undefined}
-        />
+        {recipe && (
+          <RecipeScalePanel
+            baseYieldQuantity={recipe.baseYieldQuantity}
+            baseYieldLabel={recipe.baseYieldLabel}
+            multiplier={multiplier}
+            onMultiplierChange={setMultiplier}
+          />
+        )}
+        {touched && errors.multiplier && (
+          <p className="-mt-2 text-xs text-red-600">{errors.multiplier}</p>
+        )}
 
         <TextInput
           label="Menu name"
@@ -144,7 +165,7 @@ export function AddVariantDialog({
             Cancel
           </Button>
           <Button type="submit" loading={confirming}>
-            Add to menu
+            {editingVariant ? 'Save changes' : 'Add to menu'}
           </Button>
         </div>
       </form>
