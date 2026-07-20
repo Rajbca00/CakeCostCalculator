@@ -17,7 +17,7 @@ import type { PriceListingVariant } from '../types';
 import { generateId } from '../lib/id';
 import { calculateVariantCost } from '../lib/priceListing';
 import { formatCurrency } from '../lib/format';
-import { captureElementAsPdf, captureElementAsPng, shareOrDownloadImage } from '../lib/shareImage';
+import { captureElementAsPng, shareOrDownloadImage } from '../lib/shareImage';
 import { useToast } from '../components/layout/Toast';
 
 export function PriceListingPage() {
@@ -35,7 +35,6 @@ export function PriceListingPage() {
   const [pendingDelete, setPendingDelete] = useState<PriceListingVariant | undefined>(undefined);
   const [deleting, setDeleting] = useState(false);
   const [exportingImage, setExportingImage] = useState(false);
-  const [exportingPdf, setExportingPdf] = useState(false);
   // Which menu items to include in the generated menu preview/export. Purely a UI selection —
   // not persisted — so unchecking an item here never touches the saved menu item itself.
   const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set());
@@ -136,29 +135,6 @@ export function PriceListingPage() {
     }
   }
 
-  async function handleGeneratePdf() {
-    if (!shareRef.current) return;
-    setExportingPdf(true);
-    try {
-      const blob = await captureElementAsPdf(shareRef.current);
-      const result = await shareOrDownloadImage(
-        blob,
-        'price-list.pdf',
-        'Price List',
-        'application/pdf',
-      );
-      if (result === 'downloaded') showToast('PDF downloaded', 'success');
-    } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') {
-        // user cancelled the native share sheet — not an error
-      } else {
-        showToast('Could not create the PDF. Please try again.', 'error');
-      }
-    } finally {
-      setExportingPdf(false);
-    }
-  }
-
   return (
     <PageContainer>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -239,14 +215,6 @@ export function PriceListingPage() {
                 disabled={menuVariants.length === 0}
               >
                 Export as image
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={handleGeneratePdf}
-                loading={exportingPdf}
-                disabled={menuVariants.length === 0}
-              >
-                Generate menu PDF
               </Button>
             </div>
             {menuVariants.length === 0 ? (
