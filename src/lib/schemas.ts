@@ -42,8 +42,19 @@ export const RecipeSchema = z.object({
   updatedAt: z.string(),
 });
 
+export const PriceListingVariantSchema = z.object({
+  id: z.string(),
+  recipeId: z.string(),
+  name: z.string(),
+  groupNames: z.array(z.string()),
+  multiplier: z.number(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
 export const AppDataImportSchema = z.object({
   schemaVersion: z.literal(1),
   ingredients: z.array(IngredientSchema),
   recipes: z.array(RecipeSchema),
+  priceListingVariants: z.array(PriceListingVariantSchema).default([]),
 });

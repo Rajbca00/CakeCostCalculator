@@ -34,4 +34,8 @@ export function useRecipesUsingIngredient(ingredientId: string) {
   );
 }
 
+export function usePriceListingVariants() {
+  return useAppDataContext().priceListingVariants;
+}
+
 export { useAppDataContext } from './AppDataContext';

@@ -1,22 +1,32 @@
 import { createContext, useContext, useEffect, useReducer, useState, type ReactNode } from 'react';
-import { type AppData, createEmptyAppData, type Ingredient, type Recipe } from '../types';
+import {
+  type AppData,
+  createEmptyAppData,
+  type Ingredient,
+  type PriceListingVariant,
+  type Recipe,
+} from '../types';
 import { appDataReducer } from './appDataReducer';
 import { useAuth } from './AuthContext';
 import { useToast } from '../components/layout/Toast';
 import {
   deleteIngredientRow,
+  deletePriceListingVariantRow,
   deleteRecipeRow,
   fetchAllData,
   insertIngredientRow,
+  insertPriceListingVariantRow,
   insertRecipeRow,
   replaceAllRows,
   updateIngredientRow,
+  updatePriceListingVariantRow,
   updateRecipeRow,
 } from '../lib/supabaseData';
 
 interface AppDataContextValue {
   ingredients: Ingredient[];
   recipes: Recipe[];
+  priceListingVariants: PriceListingVariant[];
   isLoading: boolean;
   addIngredient: (ingredient: Ingredient) => Promise<void>;
   updateIngredient: (ingredient: Ingredient) => Promise<void>;
@@ -24,6 +34,9 @@ interface AppDataContextValue {
   addRecipe: (recipe: Recipe, successMessage?: string) => Promise<void>;
   updateRecipe: (recipe: Recipe) => Promise<void>;
   deleteRecipe: (id: string) => Promise<void>;
+  addPriceListingVariant: (variant: PriceListingVariant) => Promise<void>;
+  updatePriceListingVariant: (variant: PriceListingVariant) => Promise<void>;
+  deletePriceListingVariant: (id: string) => Promise<void>;
   replaceAllData: (data: AppData) => Promise<void>;
   getSnapshot: () => AppData;
 }
@@ -148,6 +161,46 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function addPriceListingVariant(variant: PriceListingVariant): Promise<void> {
+    dispatch({ type: 'ADD_PRICE_LISTING_VARIANT', variant });
+    if (!user) return;
+    try {
+      await insertPriceListingVariantRow(user.id, variant);
+      showToast(`"${variant.name}" added to the menu`, 'success');
+    } catch {
+      showToast('Could not save the menu item. Refreshing…', 'error');
+      await resync();
+      throw new Error('Failed to save price listing variant');
+    }
+  }
+
+  async function updatePriceListingVariant(variant: PriceListingVariant): Promise<void> {
+    dispatch({ type: 'UPDATE_PRICE_LISTING_VARIANT', variant });
+    if (!user) return;
+    try {
+      await updatePriceListingVariantRow(user.id, variant);
+      showToast(`"${variant.name}" updated`, 'success');
+    } catch {
+      showToast('Could not save the change. Refreshing…', 'error');
+      await resync();
+      throw new Error('Failed to update price listing variant');
+    }
+  }
+
+  async function deletePriceListingVariant(id: string): Promise<void> {
+    const name = state.priceListingVariants.find((v) => v.id === id)?.name ?? 'Menu item';
+    dispatch({ type: 'DELETE_PRICE_LISTING_VARIANT', id });
+    if (!user) return;
+    try {
+      await deletePriceListingVariantRow(user.id, id);
+      showToast(`"${name}" removed`, 'success');
+    } catch {
+      showToast('Could not remove the menu item. Refreshing…', 'error');
+      await resync();
+      throw new Error('Failed to delete price listing variant');
+    }
+  }
+
   async function replaceAllData(data: AppData): Promise<void> {
     dispatch({ type: 'LOAD', data });
     if (!user) return;
@@ -157,6 +210,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const value: AppDataContextValue = {
     ingredients: state.ingredients,
     recipes: state.recipes,
+    priceListingVariants: state.priceListingVariants,
     isLoading,
     addIngredient,
     updateIngredient,
@@ -164,6 +218,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     addRecipe,
     updateRecipe,
     deleteRecipe,
+    addPriceListingVariant,
+    updatePriceListingVariant,
+    deletePriceListingVariant,
     replaceAllData,
     getSnapshot: () => state,
   };
