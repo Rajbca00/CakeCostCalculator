@@ -1,27 +1,22 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { PageContainer } from '../components/layout/PageContainer';
 import { EmptyState } from '../components/layout/EmptyState';
 import { ConfirmDialog } from '../components/layout/ConfirmDialog';
+import { DataBackupControls } from '../components/layout/DataBackupControls';
 import { Button } from '../components/common/Button';
 import { IngredientTable } from '../components/ingredients/IngredientTable';
 import { IngredientFormModal } from '../components/ingredients/IngredientFormModal';
 import { useAppDataContext, useIngredients, useRecipesUsingIngredient } from '../state/useAppData';
 import type { Ingredient } from '../types';
-import { exportAppData, parseImportedAppData } from '../lib/exportImport';
-import { useToast } from '../components/layout/Toast';
 
 export function IngredientsPage() {
   const ingredients = useIngredients();
-  const { addIngredient, updateIngredient, deleteIngredient, replaceAllData, getSnapshot } =
-    useAppDataContext();
-  const { showToast } = useToast();
+  const { addIngredient, updateIngredient, deleteIngredient } = useAppDataContext();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingIngredient, setEditingIngredient] = useState<Ingredient | undefined>(undefined);
   const [pendingDelete, setPendingDelete] = useState<Ingredient | undefined>(undefined);
   const [deleting, setDeleting] = useState(false);
-  const [importing, setImporting] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const usedByRecipes = useRecipesUsingIngredient(pendingDelete?.id ?? '');
 
@@ -56,58 +51,12 @@ export function IngredientsPage() {
     }
   }
 
-  function handleImportClick() {
-    fileInputRef.current?.click();
-  }
-
-  function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const result = parseImportedAppData(String(reader.result));
-      if (!result.success || !result.data) {
-        showToast(result.error ?? 'Import failed.', 'error');
-        return;
-      }
-      const current = getSnapshot();
-      const confirmed = window.confirm(
-        `This will replace ${current.ingredients.length} ingredients and ${current.recipes.length} recipes with ${result.data.ingredients.length} ingredients and ${result.data.recipes.length} recipes from the file. Continue?`,
-      );
-      if (!confirmed) return;
-      setImporting(true);
-      try {
-        await replaceAllData(result.data);
-        showToast('Data imported successfully.', 'success');
-      } catch {
-        showToast('Import failed while saving to the server. Please try again.', 'error');
-      } finally {
-        setImporting(false);
-      }
-    };
-    reader.readAsText(file);
-  }
-
   return (
     <PageContainer>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-semibold text-slate-900">Ingredients</h1>
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={() => exportAppData(getSnapshot())}>
-            Export
-          </Button>
-          <Button variant="secondary" onClick={handleImportClick} loading={importing}>
-            Import
-          </Button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="application/json"
-            className="hidden"
-            onChange={handleImportFile}
-          />
+          <DataBackupControls />
           <Button onClick={openAddModal}>Add ingredient</Button>
         </div>
       </div>
