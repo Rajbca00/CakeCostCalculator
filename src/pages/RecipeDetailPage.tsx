@@ -7,8 +7,10 @@ import { NumberInput } from '../components/common/NumberInput';
 import { RecipeIngredientLineEditor } from '../components/recipes/RecipeIngredientLineEditor';
 import { ExtraCostEditor } from '../components/recipes/ExtraCostEditor';
 import { RecipeCostSummary } from '../components/recipes/RecipeCostSummary';
+import { RecipeCostBreakdown } from '../components/recipes/RecipeCostBreakdown';
 import { CloneRecipeDialog } from '../components/recipes/CloneRecipeDialog';
 import { RenameRecipeDialog } from '../components/recipes/RenameRecipeDialog';
+import { Select } from '../components/common/Select';
 import { RecipeScalePanel } from '../components/scaling/RecipeScalePanel';
 import { RecipeGroupFilter } from '../components/scaling/RecipeGroupFilter';
 import { ScaledIngredientTable } from '../components/scaling/ScaledIngredientTable';
@@ -18,8 +20,9 @@ import {
   useIngredientsById,
   useRecipeById,
   useRecipes,
+  useSettings,
 } from '../state/useAppData';
-import type { ExtraCost, Recipe, RecipeIngredientLine } from '../types';
+import { RECIPE_CATEGORIES, type ExtraCost, type Recipe, type RecipeCategory, type RecipeIngredientLine } from '../types';
 import { generateId } from '../lib/id';
 import { calculateRecipeCost } from '../lib/costCalculations';
 import { getGroupNames } from '../lib/recipeGroups';
@@ -42,6 +45,11 @@ interface DraftState {
   ingredientLines: RecipeIngredientLine[];
   extraCosts: ExtraCost[];
   notes: string;
+  category: RecipeCategory | '';
+  activeTimeMinutes: number;
+  bakeTimeMinutes: number;
+  ovenPowerWatts: number;
+  wastagePercentOverride: number;
 }
 
 function draftFromRecipe(recipe?: Recipe): DraftState {
@@ -53,6 +61,11 @@ function draftFromRecipe(recipe?: Recipe): DraftState {
     ingredientLines: recipe?.ingredientLines ?? [],
     extraCosts: recipe?.extraCosts ?? [],
     notes: recipe?.notes ?? '',
+    category: recipe?.category ?? '',
+    activeTimeMinutes: recipe?.activeTimeMinutes ?? NaN,
+    bakeTimeMinutes: recipe?.bakeTimeMinutes ?? NaN,
+    ovenPowerWatts: recipe?.ovenPowerWatts ?? NaN,
+    wastagePercentOverride: recipe?.wastagePercentOverride ?? NaN,
   };
 }
 
@@ -64,6 +77,7 @@ export function RecipeDetailPage() {
   const ingredients = useIngredients();
   const ingredientsById = useIngredientsById();
   const recipes = useRecipes();
+  const settings = useSettings();
   const { addRecipe, updateRecipe } = useAppDataContext();
   const { showToast } = useToast();
 
@@ -110,6 +124,15 @@ export function RecipeDetailPage() {
       ingredientLines: draft.ingredientLines,
       extraCosts: draft.extraCosts,
       notes: draft.notes,
+      category: draft.category || undefined,
+      activeTimeMinutes: isNonNegativeNumber(draft.activeTimeMinutes)
+        ? draft.activeTimeMinutes
+        : undefined,
+      bakeTimeMinutes: isNonNegativeNumber(draft.bakeTimeMinutes) ? draft.bakeTimeMinutes : undefined,
+      ovenPowerWatts: isNonNegativeNumber(draft.ovenPowerWatts) ? draft.ovenPowerWatts : undefined,
+      wastagePercentOverride: isNonNegativeNumber(draft.wastagePercentOverride)
+        ? draft.wastagePercentOverride
+        : undefined,
       createdAt: recipe?.createdAt ?? '',
       updatedAt: recipe?.updatedAt ?? '',
     }),
@@ -117,8 +140,8 @@ export function RecipeDetailPage() {
   );
 
   const baseCostResult = useMemo(
-    () => calculateRecipeCost(draftAsRecipe, ingredientsById, 1),
-    [draftAsRecipe, ingredientsById],
+    () => calculateRecipeCost(draftAsRecipe, ingredientsById, 1, undefined, 0, settings),
+    [draftAsRecipe, ingredientsById, settings],
   );
 
   const scaledCostResult = useMemo(
@@ -130,6 +153,7 @@ export function RecipeDetailPage() {
             multiplier,
             hasMultipleGroups ? selectedGroups : undefined,
             discountPercent,
+            settings,
           )
         : baseCostResult,
     [
@@ -139,6 +163,7 @@ export function RecipeDetailPage() {
       hasMultipleGroups,
       selectedGroups,
       discountPercent,
+      settings,
       baseCostResult,
     ],
   );
@@ -222,6 +247,15 @@ export function RecipeDetailPage() {
       ingredientLines: draft.ingredientLines,
       extraCosts: draft.extraCosts,
       notes: draft.notes.trim() || undefined,
+      category: draft.category || undefined,
+      activeTimeMinutes: isNonNegativeNumber(draft.activeTimeMinutes)
+        ? draft.activeTimeMinutes
+        : undefined,
+      bakeTimeMinutes: isNonNegativeNumber(draft.bakeTimeMinutes) ? draft.bakeTimeMinutes : undefined,
+      ovenPowerWatts: isNonNegativeNumber(draft.ovenPowerWatts) ? draft.ovenPowerWatts : undefined,
+      wastagePercentOverride: isNonNegativeNumber(draft.wastagePercentOverride)
+        ? draft.wastagePercentOverride
+        : undefined,
       createdAt: recipe?.createdAt ?? now,
       updatedAt: now,
     };
@@ -338,6 +372,59 @@ export function RecipeDetailPage() {
               min={0}
               placeholder="e.g. 30"
             />
+            <Select
+              label="Category (optional)"
+              value={draft.category}
+              onChange={(e) =>
+                setDraft((d) => ({ ...d, category: e.target.value as RecipeCategory | '' }))
+              }
+            >
+              <option value="">No category</option>
+              {RECIPE_CATEGORIES.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <div>
+            <h2 className="mb-2 text-sm font-semibold text-slate-800">
+              Labour &amp; electricity{' '}
+              <span className="font-normal text-slate-400">
+                (optional -- uses rates from Settings)
+              </span>
+            </h2>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <NumberInput
+                label="Active time (min)"
+                value={draft.activeTimeMinutes}
+                onValueChange={(v) => setDraft((d) => ({ ...d, activeTimeMinutes: v }))}
+                min={0}
+                placeholder="e.g. 25"
+              />
+              <NumberInput
+                label="Bake time (min)"
+                value={draft.bakeTimeMinutes}
+                onValueChange={(v) => setDraft((d) => ({ ...d, bakeTimeMinutes: v }))}
+                min={0}
+                placeholder="e.g. 40"
+              />
+              <NumberInput
+                label="Oven power override (W)"
+                value={draft.ovenPowerWatts}
+                onValueChange={(v) => setDraft((d) => ({ ...d, ovenPowerWatts: v }))}
+                min={0}
+                placeholder={`Default ${settings.ovenPowerWatts}`}
+              />
+              <NumberInput
+                label="Wastage % override"
+                value={draft.wastagePercentOverride}
+                onValueChange={(v) => setDraft((d) => ({ ...d, wastagePercentOverride: v }))}
+                min={0}
+                placeholder={`Default ${settings.wastagePercent}`}
+              />
+            </div>
           </div>
 
           <div>
@@ -367,6 +454,7 @@ export function RecipeDetailPage() {
           </div>
 
           <RecipeCostSummary result={baseCostResult} yieldLabel={draft.baseYieldLabel} />
+          <RecipeCostBreakdown result={baseCostResult} />
 
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => navigate('/recipes')} disabled={saving}>
@@ -426,6 +514,7 @@ export function RecipeDetailPage() {
               </div>
               <ScaledIngredientTable result={scaledCostResult} groupBy={hasMultipleGroups} />
               <RecipeCostSummary result={scaledCostResult} yieldLabel={recipe.baseYieldLabel} />
+              <RecipeCostBreakdown result={scaledCostResult} />
             </div>
           </div>
         )

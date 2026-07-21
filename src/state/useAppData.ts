@@ -38,4 +38,12 @@ export function usePriceListingVariants() {
   return useAppDataContext().priceListingVariants;
 }
 
+export function useSettings() {
+  return useAppDataContext().settings;
+}
+
+export function usePackagingTemplates() {
+  return useAppDataContext().packagingTemplates;
+}
+
 export { useAppDataContext } from './AppDataContext';

@@ -1,8 +1,10 @@
 import { createContext, useContext, useEffect, useReducer, useState, type ReactNode } from 'react';
 import {
   type AppData,
+  type BusinessSettings,
   createEmptyAppData,
   type Ingredient,
+  type PackagingTemplate,
   type PriceListingVariant,
   type Recipe,
 } from '../types';
@@ -11,22 +13,28 @@ import { useAuth } from './AuthContext';
 import { useToast } from '../components/layout/Toast';
 import {
   deleteIngredientRow,
+  deletePackagingTemplateRow,
   deletePriceListingVariantRow,
   deleteRecipeRow,
   fetchAllData,
   insertIngredientRow,
+  insertPackagingTemplateRow,
   insertPriceListingVariantRow,
   insertRecipeRow,
   replaceAllRows,
   updateIngredientRow,
+  updatePackagingTemplateRow,
   updatePriceListingVariantRow,
   updateRecipeRow,
+  upsertBusinessSettingsRow,
 } from '../lib/supabaseData';
 
 interface AppDataContextValue {
   ingredients: Ingredient[];
   recipes: Recipe[];
   priceListingVariants: PriceListingVariant[];
+  settings: BusinessSettings;
+  packagingTemplates: PackagingTemplate[];
   isLoading: boolean;
   addIngredient: (ingredient: Ingredient) => Promise<void>;
   updateIngredient: (ingredient: Ingredient) => Promise<void>;
@@ -37,6 +45,10 @@ interface AppDataContextValue {
   addPriceListingVariant: (variant: PriceListingVariant) => Promise<void>;
   updatePriceListingVariant: (variant: PriceListingVariant) => Promise<void>;
   deletePriceListingVariant: (id: string) => Promise<void>;
+  updateSettings: (settings: BusinessSettings) => Promise<void>;
+  addPackagingTemplate: (template: PackagingTemplate) => Promise<void>;
+  updatePackagingTemplate: (template: PackagingTemplate) => Promise<void>;
+  deletePackagingTemplate: (id: string) => Promise<void>;
   replaceAllData: (data: AppData) => Promise<void>;
   getSnapshot: () => AppData;
 }
@@ -201,6 +213,59 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function updateSettings(settings: BusinessSettings): Promise<void> {
+    dispatch({ type: 'SET_SETTINGS', settings });
+    if (!user) return;
+    try {
+      await upsertBusinessSettingsRow(user.id, settings);
+      showToast('Settings saved', 'success');
+    } catch {
+      showToast('Could not save settings. Refreshing…', 'error');
+      await resync();
+      throw new Error('Failed to save settings');
+    }
+  }
+
+  async function addPackagingTemplate(template: PackagingTemplate): Promise<void> {
+    dispatch({ type: 'ADD_PACKAGING_TEMPLATE', template });
+    if (!user) return;
+    try {
+      await insertPackagingTemplateRow(user.id, template);
+      showToast(`"${template.name}" added`, 'success');
+    } catch {
+      showToast('Could not save the packaging template. Refreshing…', 'error');
+      await resync();
+      throw new Error('Failed to save packaging template');
+    }
+  }
+
+  async function updatePackagingTemplate(template: PackagingTemplate): Promise<void> {
+    dispatch({ type: 'UPDATE_PACKAGING_TEMPLATE', template });
+    if (!user) return;
+    try {
+      await updatePackagingTemplateRow(user.id, template);
+      showToast(`"${template.name}" updated`, 'success');
+    } catch {
+      showToast('Could not save the change. Refreshing…', 'error');
+      await resync();
+      throw new Error('Failed to update packaging template');
+    }
+  }
+
+  async function deletePackagingTemplate(id: string): Promise<void> {
+    const name = state.packagingTemplates.find((t) => t.id === id)?.name ?? 'Packaging template';
+    dispatch({ type: 'DELETE_PACKAGING_TEMPLATE', id });
+    if (!user) return;
+    try {
+      await deletePackagingTemplateRow(user.id, id);
+      showToast(`"${name}" deleted`, 'success');
+    } catch {
+      showToast('Could not delete the packaging template. Refreshing…', 'error');
+      await resync();
+      throw new Error('Failed to delete packaging template');
+    }
+  }
+
   async function replaceAllData(data: AppData): Promise<void> {
     dispatch({ type: 'LOAD', data });
     if (!user) return;
@@ -211,6 +276,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     ingredients: state.ingredients,
     recipes: state.recipes,
     priceListingVariants: state.priceListingVariants,
+    settings: state.settings,
+    packagingTemplates: state.packagingTemplates,
     isLoading,
     addIngredient,
     updateIngredient,
@@ -221,6 +288,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     addPriceListingVariant,
     updatePriceListingVariant,
     deletePriceListingVariant,
+    updateSettings,
+    addPackagingTemplate,
+    updatePackagingTemplate,
+    deletePackagingTemplate,
     replaceAllData,
     getSnapshot: () => state,
   };

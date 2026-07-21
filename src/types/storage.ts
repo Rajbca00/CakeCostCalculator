@@ -1,12 +1,17 @@
 import type { Ingredient } from './ingredient';
 import type { Recipe } from './recipe';
 import type { PriceListingVariant } from './priceListing';
+import type { BusinessSettings } from './settings';
+import { DEFAULT_BUSINESS_SETTINGS } from './settings';
+import type { PackagingTemplate } from './packagingTemplate';
 
 export interface AppDataV1 {
   schemaVersion: 1;
   ingredients: Ingredient[];
   recipes: Recipe[];
   priceListingVariants: PriceListingVariant[];
+  settings: BusinessSettings;
+  packagingTemplates: PackagingTemplate[];
 }
 
 export type AppData = AppDataV1;
@@ -19,5 +24,7 @@ export function createEmptyAppData(): AppData {
     ingredients: [],
     recipes: [],
     priceListingVariants: [],
+    settings: DEFAULT_BUSINESS_SETTINGS,
+    packagingTemplates: [],
   };
 }

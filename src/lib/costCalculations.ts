@@ -1,6 +1,16 @@
 import { getUnitCategory, toBaseUnit } from './units';
 import { normalizeGroupName } from './recipeGroups';
-import type { Ingredient, Recipe, RecipeIngredientLine } from '../types';
+import { bucketForCategory, resolveExtraCostCategory, resolveIngredientLineCategory } from './costCategory';
+import {
+  COST_BUCKETS,
+  COST_CATEGORIES,
+  type BusinessSettings,
+  type CostBucket,
+  type CostCategory,
+  type Ingredient,
+  type Recipe,
+  type RecipeIngredientLine,
+} from '../types';
 
 export function round2(amount: number): number {
   return Math.round((amount + Number.EPSILON) * 100) / 100;
@@ -30,6 +40,7 @@ export interface RecipeCostLineResult {
   cost: number;
   missingIngredient: boolean;
   groupName: string;
+  category: CostCategory;
 }
 
 export interface RecipeCostExtraResult {
@@ -37,6 +48,7 @@ export interface RecipeCostExtraResult {
   label: string;
   amount: number;
   groupName: string;
+  category: CostCategory;
 }
 
 export interface RecipeCostResult {
@@ -58,6 +70,22 @@ export interface RecipeCostResult {
   discountAmount: number;
   /** Selling price after the discount is applied. */
   finalPrice: number;
+
+  // --- Cost-breakdown dashboard fields (additive; never affect the pricing fields above) ---
+  /** Sum of all ingredient-line/extra-cost amounts per fixed cost category. */
+  categoryTotals: Record<CostCategory, number>;
+  /** categoryTotals rolled up into the four dashboard buckets. */
+  bucketTotals: Record<CostBucket, number>;
+  /** Wastage % actually applied (recipe override, else global settings, else 0). */
+  wastagePercent: number;
+  /** ingredientsTotal * wastagePercent / 100. */
+  wastageAmount: number;
+  /** recipe.activeTimeMinutes (scaled by multiplier) * settings.laborHourlyRate / 60. */
+  laborAmount: number;
+  /** (recipe.ovenPowerWatts or settings default) / 1000 * settings.electricityRatePerUnit * recipe.bakeTimeMinutes / 60. */
+  electricityAmount: number;
+  /** total + wastageAmount + laborAmount + electricityAmount -- the fully-loaded cost. Not used for pricing (yet). */
+  actualCost: number;
 }
 
 export function calculateRecipeCost(
@@ -66,6 +94,7 @@ export function calculateRecipeCost(
   multiplier: number = 1,
   activeGroups?: Set<string>,
   discountPercent: number = 0,
+  settings?: BusinessSettings,
 ): RecipeCostResult {
   const lines: RecipeCostLineResult[] = recipe.ingredientLines
     .filter((line) => !activeGroups || activeGroups.has(normalizeGroupName(line.groupName)))
@@ -87,6 +116,7 @@ export function calculateRecipeCost(
         cost,
         missingIngredient: !ingredient || categoryMismatch,
         groupName: normalizeGroupName(line.groupName),
+        category: resolveIngredientLineCategory(line),
       };
     });
 
@@ -97,6 +127,7 @@ export function calculateRecipeCost(
       label: e.label,
       amount: e.scalesWithYield ? e.amount * multiplier : e.amount,
       groupName: normalizeGroupName(e.groupName),
+      category: resolveExtraCostCategory(e),
     }));
 
   // Round subtotals to the cent before combining them, and derive every
@@ -117,6 +148,48 @@ export function calculateRecipeCost(
   const safeDiscountPercent = Math.min(100, Math.max(0, discountPercent || 0));
   const finalPrice = round2(sellingTotal * (1 - safeDiscountPercent / 100));
 
+  const categoryTotals = Object.fromEntries(
+    COST_CATEGORIES.map((category) => [
+      category,
+      round2(
+        lines.filter((l) => l.category === category).reduce((sum, l) => sum + l.cost, 0) +
+          extraCosts.filter((e) => e.category === category).reduce((sum, e) => sum + e.amount, 0),
+      ),
+    ]),
+  ) as Record<CostCategory, number>;
+
+  const wastagePercent = Math.max(
+    0,
+    recipe.wastagePercentOverride ?? settings?.wastagePercent ?? 0,
+  );
+  const wastageAmount = round2(ingredientsTotal * (wastagePercent / 100));
+
+  const laborMinutes = (recipe.activeTimeMinutes ?? 0) * multiplier;
+  const laborAmount = settings ? round2(laborMinutes * (settings.laborHourlyRate / 60)) : 0;
+
+  const ovenPowerWatts = recipe.ovenPowerWatts ?? settings?.ovenPowerWatts ?? 0;
+  const bakeTimeMinutes = recipe.bakeTimeMinutes ?? 0;
+  const electricityAmount = settings
+    ? round2((ovenPowerWatts / 1000) * settings.electricityRatePerUnit * (bakeTimeMinutes / 60))
+    : 0;
+
+  // Bucket totals fold in the automatic labour/electricity amounts (on top of any
+  // manually-tagged Labour/Overheads lines) so the breakdown adds up to actualCost below.
+  const bucketTotals = Object.fromEntries(
+    COST_BUCKETS.map((bucket) => {
+      const fromCategories = round2(
+        COST_CATEGORIES.filter((category) => bucketForCategory(category) === bucket).reduce(
+          (sum, category) => sum + categoryTotals[category],
+          0,
+        ),
+      );
+      const automatic = bucket === 'labour' ? laborAmount : bucket === 'overheads' ? electricityAmount : 0;
+      return [bucket, round2(fromCategories + automatic)];
+    }),
+  ) as Record<CostBucket, number>;
+
+  const actualCost = round2(total + wastageAmount + laborAmount + electricityAmount);
+
   return {
     lines,
     extraCosts,
@@ -131,5 +204,12 @@ export function calculateRecipeCost(
     discountPercent: safeDiscountPercent,
     discountAmount: round2(sellingTotal - finalPrice),
     finalPrice,
+    categoryTotals,
+    bucketTotals,
+    wastagePercent,
+    wastageAmount,
+    laborAmount,
+    electricityAmount,
+    actualCost,
   };
 }

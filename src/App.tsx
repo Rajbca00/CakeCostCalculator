@@ -10,6 +10,7 @@ import { IngredientsPage } from './pages/IngredientsPage';
 import { RecipesPage } from './pages/RecipesPage';
 import { RecipeDetailPage } from './pages/RecipeDetailPage';
 import { PriceListingPage } from './pages/PriceListingPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
                     <Route path="/recipes/new" element={<RecipeDetailPage />} />
                     <Route path="/recipes/:id" element={<RecipeDetailPage />} />
                     <Route path="/price-listing" element={<PriceListingPage />} />
+                    <Route path="/settings" element={<SettingsPage />} />
                     <Route path="*" element={<NotFoundPage />} />
                   </Routes>
                 </div>

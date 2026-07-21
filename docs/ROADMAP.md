@@ -21,13 +21,21 @@ These were confirmed with the bakery owner before implementation started:
 1. **Hierarchy model**: one *current parent* per recipe (e.g. Chocolate Cake
    → parent Vanilla Sponge), not per-version pinning. Simpler to cost and
    reason about; matches the examples given.
-2. **Groups → categories**: the existing free-text `groupName` on ingredient
-   lines/extra costs is replaced by a fixed cost category enum (Batter,
-   Frosting, Filling, Decoration, Packaging, Overheads, Labour). Existing
-   group values are migrated on a best-effort basis (exact/near matches map
-   to a category; anything unrecognized defaults to Batter/Ungrouped) —
-   nothing is deleted, and recipes keep costing correctly during the
-   transition.
+2. **Groups + categories (revised during Phase 1 implementation)**: the plan
+   was to *replace* free-text `groupName` with the fixed cost category enum.
+   Implementing that literally would have broken Price Listing: two
+   different named groups on the same recipe (e.g. "Icing 1" vs "Icing 2")
+   would both resolve to the same category ("Frosting"), making them
+   indistinguishable — so a menu item built from one specific icing could no
+   longer be told apart from one built from the other. Since "don't break
+   existing functionality" overrides this specific sub-decision, `groupName`
+   is kept exactly as-is (still drives Price Listing variant combinations and
+   the grouped Calculate-tab view) and a new, independent `category` field
+   was added alongside it purely for the cost-breakdown dashboard. Existing
+   lines without an explicit `category` get one guessed from their
+   `groupName` via keyword matching (e.g. "icing" → Frosting, "box" →
+   Packaging), computed on read — no data is rewritten until a line is
+   explicitly re-saved with a category.
 3. **Price Listing supersession**: the current Price Listing page (recipe +
    group-subset + yield, exported as an image) is folded into the new
    Product Variant + Customer Menu Generator model instead of living
@@ -47,25 +55,40 @@ These were confirmed with the bakery owner before implementation started:
 
 ## Phases
 
-### Phase 1 — Foundation (not started)
+### Phase 1 — Foundation (shipped)
 Schema + Settings, mostly invisible to existing recipes until they opt in.
-- Global Settings table + page: labour rate, electricity tariff, oven
-  power, LPG cost, wastage %, default markup %, currency, tax.
+- Global Settings page: labour rate, electricity tariff, oven power, LPG
+  cost, wastage %, default markup %, currency code/symbol, tax %. One row
+  per user (`business_settings` table), rates default to 0 so nothing
+  changes until the owner sets real numbers.
 - Cost category enum (Batter/Frosting/Filling/Decoration/Packaging/
-  Overheads/Labour) with a migration from existing `groupName` values.
-- Cost breakdown restructure: ingredient lines and extra costs carry a
-  category; recipe costing rolls up into Ingredients / Packaging /
-  Overheads / Labour subtotals instead of one flat total.
-- Labour cost = hourly rate × active time (active time is a new per-recipe
-  field; see assumption above).
-- Electricity cost = oven power × electricity rate × bake time (new
-  per-recipe fields: oven power override, bake time).
-- Wastage %: global default (3%), overridable per recipe, applied
-  automatically to ingredient cost.
-- Packaging Templates table (name, cost, description) — reusable, not tied
-  to one recipe.
+  Overheads/Labour) added *alongside* `groupName` (see revised decision #2
+  above), with a keyword-based guess from legacy `groupName` when
+  `category` isn't set explicitly.
+- Cost breakdown restructure: `calculateRecipeCost` now additionally returns
+  `categoryTotals`, `bucketTotals` (Ingredients/Packaging/Overheads/Labour),
+  `laborAmount`, `electricityAmount`, `wastageAmount`, and `actualCost` —
+  all additive; `total`/`sellingTotal`/`profitAmount`/`finalPrice` are
+  computed exactly as before, so no existing price changes. Shown on the
+  recipe page as a new "Cost breakdown" panel underneath the existing
+  summary.
+- Labour cost = hourly rate × active time (`Recipe.activeTimeMinutes`, new
+  optional field, scales with batch multiplier).
+- Electricity cost = oven power × electricity rate × bake time
+  (`Recipe.bakeTimeMinutes` + optional `Recipe.ovenPowerWatts` override).
+- Wastage %: global default (3%, visible as its own line item, not folded
+  invisibly into cost), overridable per recipe via
+  `Recipe.wastagePercentOverride`.
+- Packaging Templates: CRUD (name, cost, description) on the Settings page,
+  not yet linked to a recipe/variant — that wiring is Phase 3's Product
+  Variants work.
 - Recipe Categories (Cakes/Cupcakes/Brownies/Cookies/Frostings/Fillings/
-  Ganache/Decorations) as a field on Recipe.
+  Ganache/Decorations): field on Recipe + edit-form dropdown. Not yet used
+  for filtering/grouping on the Recipes page — that's Phase 4 UI work.
+
+**Known gaps left for later phases:** `currencyCode`/`currencySymbol` are
+captured in Settings but `formatCurrency()` still hardcodes ₹ everywhere;
+wiring it through is deferred to avoid scope creep in this phase.
 
 ### Phase 2 — Hierarchy & Versioning (not started)
 The structural change: a "recipe" becomes a family with versions.
@@ -116,7 +139,7 @@ another migration:
 
 | Phase | Status |
 |---|---|
-| 1. Foundation | Not started |
+| 1. Foundation | Shipped |
 | 2. Hierarchy & Versioning | Not started |
 | 3. Pricing & Customer Menu | Not started |
 | 4. Business Intelligence & UI | Not started |

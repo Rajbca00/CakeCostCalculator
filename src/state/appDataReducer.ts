@@ -1,4 +1,11 @@
-import { type AppData, type Ingredient, type PriceListingVariant, type Recipe } from '../types';
+import {
+  type AppData,
+  type BusinessSettings,
+  type Ingredient,
+  type PackagingTemplate,
+  type PriceListingVariant,
+  type Recipe,
+} from '../types';
 
 export type AppDataAction =
   | { type: 'LOAD'; data: AppData }
@@ -10,7 +17,11 @@ export type AppDataAction =
   | { type: 'DELETE_RECIPE'; id: string }
   | { type: 'ADD_PRICE_LISTING_VARIANT'; variant: PriceListingVariant }
   | { type: 'UPDATE_PRICE_LISTING_VARIANT'; variant: PriceListingVariant }
-  | { type: 'DELETE_PRICE_LISTING_VARIANT'; id: string };
+  | { type: 'DELETE_PRICE_LISTING_VARIANT'; id: string }
+  | { type: 'SET_SETTINGS'; settings: BusinessSettings }
+  | { type: 'ADD_PACKAGING_TEMPLATE'; template: PackagingTemplate }
+  | { type: 'UPDATE_PACKAGING_TEMPLATE'; template: PackagingTemplate }
+  | { type: 'DELETE_PACKAGING_TEMPLATE'; id: string };
 
 export function appDataReducer(state: AppData, action: AppDataAction): AppData {
   switch (action.type) {
@@ -58,6 +69,22 @@ export function appDataReducer(state: AppData, action: AppDataAction): AppData {
       return {
         ...state,
         priceListingVariants: state.priceListingVariants.filter((v) => v.id !== action.id),
+      };
+    case 'SET_SETTINGS':
+      return { ...state, settings: action.settings };
+    case 'ADD_PACKAGING_TEMPLATE':
+      return { ...state, packagingTemplates: [...state.packagingTemplates, action.template] };
+    case 'UPDATE_PACKAGING_TEMPLATE':
+      return {
+        ...state,
+        packagingTemplates: state.packagingTemplates.map((t) =>
+          t.id === action.template.id ? action.template : t,
+        ),
+      };
+    case 'DELETE_PACKAGING_TEMPLATE':
+      return {
+        ...state,
+        packagingTemplates: state.packagingTemplates.filter((t) => t.id !== action.id),
       };
     default:
       return state;
