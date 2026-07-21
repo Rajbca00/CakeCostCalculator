@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer } from '../components/layout/PageContainer';
 import { EmptyState } from '../components/layout/EmptyState';
@@ -8,8 +8,10 @@ import { RecipeList } from '../components/recipes/RecipeList';
 import { CloneRecipeDialog } from '../components/recipes/CloneRecipeDialog';
 import { RenameRecipeDialog } from '../components/recipes/RenameRecipeDialog';
 import { useAppDataContext, useRecipes } from '../state/useAppData';
-import type { Recipe } from '../types';
+import { RECIPE_CATEGORIES, type Recipe } from '../types';
 import { cloneRecipeWithName } from '../lib/recipeClone';
+
+const UNCATEGORIZED = 'Uncategorized';
 
 export function RecipesPage() {
   const recipes = useRecipes();
@@ -20,7 +22,32 @@ export function RecipesPage() {
   const [deleting, setDeleting] = useState(false);
   const [cloning, setCloning] = useState(false);
   const [renaming, setRenaming] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
+
+  const groupedByCategory = useMemo(() => {
+    const map = new Map<string, Recipe[]>();
+    recipes.forEach((r) => {
+      const key = r.category ?? UNCATEGORIZED;
+      const arr = map.get(key) ?? [];
+      arr.push(r);
+      map.set(key, arr);
+    });
+    return map;
+  }, [recipes]);
+
+  const categoryOrder = [...RECIPE_CATEGORIES, UNCATEGORIZED].filter((c) =>
+    groupedByCategory.has(c),
+  );
+
+  function toggleCategory(category: string) {
+    setExpandedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(category)) next.delete(category);
+      else next.add(category);
+      return next;
+    });
+  }
 
   async function handleConfirmClone(newName: string) {
     if (!cloningRecipe) return;
@@ -82,12 +109,37 @@ export function RecipesPage() {
           action={<Button onClick={() => navigate('/recipes/new')}>Add your first recipe</Button>}
         />
       ) : (
-        <RecipeList
-          recipes={recipes}
-          onRename={setRenamingRecipe}
-          onClone={setCloningRecipe}
-          onDelete={setPendingDelete}
-        />
+        <div className="flex flex-col gap-2">
+          {categoryOrder.map((category) => {
+            const categoryRecipes = groupedByCategory.get(category)!;
+            const expanded = expandedCategories.has(category);
+            return (
+              <div key={category} className="rounded-lg border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => toggleCategory(category)}
+                  className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
+                >
+                  <span className="text-sm font-semibold text-slate-800">
+                    {category}{' '}
+                    <span className="font-normal text-slate-400">({categoryRecipes.length})</span>
+                  </span>
+                  <span className="text-slate-400">{expanded ? '▲' : '▼'}</span>
+                </button>
+                {expanded && (
+                  <div className="border-t border-slate-200 p-3">
+                    <RecipeList
+                      recipes={categoryRecipes}
+                      onRename={setRenamingRecipe}
+                      onClone={setCloningRecipe}
+                      onDelete={setPendingDelete}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       )}
 
       <RenameRecipeDialog
