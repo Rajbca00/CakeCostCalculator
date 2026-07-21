@@ -1,7 +1,6 @@
 import type { Ingredient, RecipeIngredientLine } from '../../types';
 import { getUnitCategory } from '../../lib/units';
 import { lineCost } from '../../lib/costCalculations';
-import { resolveIngredientLineCategory } from '../../lib/costCategory';
 import { formatCurrency } from '../../lib/format';
 import { generateId } from '../../lib/id';
 import { NumberInput } from '../common/NumberInput';
@@ -9,7 +8,6 @@ import { Select } from '../common/Select';
 import { UnitSelect } from '../common/UnitSelect';
 import { Button } from '../common/Button';
 import { GroupSelect } from './GroupSelect';
-import { CategorySelect } from './CategorySelect';
 import { Link } from 'react-router-dom';
 
 interface RecipeIngredientLineEditorProps {
@@ -104,11 +102,6 @@ export function RecipeIngredientLineEditor({
               groupOptions={groupOptions}
               onChange={(groupName) => updateLine(line.id, { groupName })}
               className="w-36"
-            />
-            <CategorySelect
-              value={resolveIngredientLineCategory(line)}
-              onChange={(category) => updateLine(line.id, { category })}
-              className="w-32"
             />
             <span className="mb-2 min-w-[5rem] text-sm text-slate-600">
               {formatCurrency(lineCost(line, ingredient))}

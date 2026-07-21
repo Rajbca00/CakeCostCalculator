@@ -1,4 +1,5 @@
 import type { ExtraCost, RecipeIngredientLine } from './recipe';
+import type { CostBucket } from './costCategory';
 import type { RecipeCategory } from './recipeCategory';
 import type { RecipeStatus } from './recipeStatus';
 
@@ -27,5 +28,6 @@ export interface RecipeVersion {
   bakeTimeMinutes?: number;
   ovenPowerWatts?: number;
   wastagePercentOverride?: number;
+  groupBuckets?: Record<string, CostBucket>;
   createdAt: string;
 }

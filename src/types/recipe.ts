@@ -1,5 +1,5 @@
 import type { Unit } from './unit';
-import type { CostCategory } from './costCategory';
+import type { CostBucket, CostCategory } from './costCategory';
 import type { RecipeCategory } from './recipeCategory';
 import type { RecipeStatus } from './recipeStatus';
 
@@ -10,14 +10,15 @@ export interface RecipeIngredientLine {
   unit: Unit;
   /**
    * Optional named group, e.g. "Base cake", "Icing 1". Blank/undefined = ungrouped.
-   * Drives which optional components exist for Price Listing variant combinations
-   * and the grouped Calculate-tab view -- kept independent from `category` below.
+   * Drives which optional components exist for Price Listing variant combinations,
+   * the grouped Calculate-tab view, and (via Recipe.groupBuckets) the cost-breakdown
+   * dashboard -- one group name now serves all three.
    */
   groupName?: string;
   /**
-   * Fixed cost-accounting category (Batter/Frosting/Filling/Decoration/Packaging/
-   * Overheads/Labour) used to roll costs up for the cost-breakdown dashboard.
-   * When unset, it's derived from `groupName` on the fly -- see lib/costCategory.ts.
+   * Legacy per-line cost category from before groups could carry a bucket assignment
+   * directly. Kept only so recipes saved before that change keep costing exactly the
+   * same; the UI no longer sets this -- see Recipe.groupBuckets and lib/groupBucket.ts.
    */
   category?: CostCategory;
 }
@@ -53,6 +54,13 @@ export interface Recipe {
   ovenPowerWatts?: number;
   /** Overrides the global default wastage % for this recipe. */
   wastagePercentOverride?: number;
+  /**
+   * Which cost-breakdown bucket (Ingredients/Packaging/Overheads/Labour) each group name
+   * rolls into, e.g. { "Ganache Topping": "ingredients" }. Set once per group name (not per
+   * line) via the recipe editor's "Groups & cost buckets" panel. A group without an entry
+   * here falls back to a keyword guess from its name -- see lib/groupBucket.ts.
+   */
+  groupBuckets?: Record<string, CostBucket>;
   /**
    * Recipe this one inherits ingredients/extra costs from. The child stores only its own
    * additional lines; effective cost = parent's effective lines + this recipe's own lines,

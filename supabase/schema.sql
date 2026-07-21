@@ -49,6 +49,10 @@ alter table recipes add column if not exists wastage_percent_override numeric;
 alter table recipes add column if not exists parent_recipe_id uuid references recipes(id) on delete set null;
 alter table recipes add column if not exists status text;
 
+-- Cost-accounting redesign: which dashboard bucket each group name rolls into,
+-- assigned once per group name instead of per ingredient/extra-cost line.
+alter table recipes add column if not exists group_buckets jsonb;
+
 create table if not exists price_listing_variants (
   id uuid primary key,
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -145,6 +149,7 @@ create table if not exists recipe_versions (
   bake_time_minutes numeric,
   oven_power_watts numeric,
   wastage_percent_override numeric,
+  group_buckets jsonb,
   created_at timestamptz not null
 );
 
@@ -169,26 +174,36 @@ alter table recipe_versions enable row level security;
 alter table add_ons enable row level security;
 alter table quotes enable row level security;
 
+-- "drop policy if exists" before each "create policy" makes this whole file safely
+-- re-runnable end-to-end (Postgres has no "create policy if not exists").
+drop policy if exists "Users manage their own ingredients" on ingredients;
 create policy "Users manage their own ingredients" on ingredients
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists "Users manage their own recipes" on recipes;
 create policy "Users manage their own recipes" on recipes
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists "Users manage their own price listing variants" on price_listing_variants;
 create policy "Users manage their own price listing variants" on price_listing_variants
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists "Users manage their own business settings" on business_settings;
 create policy "Users manage their own business settings" on business_settings
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists "Users manage their own packaging templates" on packaging_templates;
 create policy "Users manage their own packaging templates" on packaging_templates
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists "Users manage their own recipe versions" on recipe_versions;
 create policy "Users manage their own recipe versions" on recipe_versions
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists "Users manage their own add-ons" on add_ons;
 create policy "Users manage their own add-ons" on add_ons
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists "Users manage their own quotes" on quotes;
 create policy "Users manage their own quotes" on quotes
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);

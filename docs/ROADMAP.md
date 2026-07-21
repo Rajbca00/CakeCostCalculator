@@ -21,21 +21,29 @@ These were confirmed with the bakery owner before implementation started:
 1. **Hierarchy model**: one *current parent* per recipe (e.g. Chocolate Cake
    → parent Vanilla Sponge), not per-version pinning. Simpler to cost and
    reason about; matches the examples given.
-2. **Groups + categories (revised during Phase 1 implementation)**: the plan
-   was to *replace* free-text `groupName` with the fixed cost category enum.
-   Implementing that literally would have broken Price Listing: two
-   different named groups on the same recipe (e.g. "Icing 1" vs "Icing 2")
-   would both resolve to the same category ("Frosting"), making them
-   indistinguishable — so a menu item built from one specific icing could no
-   longer be told apart from one built from the other. Since "don't break
-   existing functionality" overrides this specific sub-decision, `groupName`
-   is kept exactly as-is (still drives Price Listing variant combinations and
-   the grouped Calculate-tab view) and a new, independent `category` field
-   was added alongside it purely for the cost-breakdown dashboard. Existing
-   lines without an explicit `category` get one guessed from their
-   `groupName` via keyword matching (e.g. "icing" → Frosting, "box" →
-   Packaging), computed on read — no data is rewritten until a line is
-   explicitly re-saved with a category.
+2. **Groups + categories (revised during Phase 1 implementation, then again
+   later)**: the plan was to *replace* free-text `groupName` with the fixed
+   cost category enum. Implementing that literally would have broken Price
+   Listing: two different named groups on the same recipe (e.g. "Icing 1" vs
+   "Icing 2") would both resolve to the same category ("Frosting"), making
+   them indistinguishable — so a menu item built from one specific icing
+   could no longer be told apart from one built from the other. Since "don't
+   break existing functionality" overrides this specific sub-decision,
+   `groupName` is kept exactly as-is (still drives Price Listing variant
+   combinations and the grouped Calculate-tab view). A per-line `category`
+   dropdown was added alongside it for the cost-breakdown dashboard, but the
+   owner found picking a category per ingredient/extra-cost line redundant
+   with the group name they'd already typed. It was replaced with
+   `Recipe.groupBuckets`: a per-recipe map from group name to one of 4
+   dashboard buckets (Ingredients/Packaging/Overheads/Labour), assigned once
+   per group name via the recipe editor's "Groups & cost buckets" panel and
+   reused automatically by every line/extra cost sharing that group name. The
+   per-line `category` field is kept only for backward compatibility — any
+   line that already has one explicitly set still costs into that bucket
+   (recipes saved before this change keep costing exactly the same); the UI
+   no longer sets it. Groups without an explicit bucket assignment fall back
+   to a keyword guess from the group name (e.g. "icing" → Ingredients, "box"
+   → Packaging), computed on read.
 3. **Price Listing supersession**: the current Price Listing page (recipe +
    group-subset + yield, exported as an image) is folded into the new
    Product Variant + Customer Menu Generator model instead of living

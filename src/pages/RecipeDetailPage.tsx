@@ -6,6 +6,7 @@ import { TextInput } from '../components/common/TextInput';
 import { NumberInput } from '../components/common/NumberInput';
 import { RecipeIngredientLineEditor } from '../components/recipes/RecipeIngredientLineEditor';
 import { ExtraCostEditor } from '../components/recipes/ExtraCostEditor';
+import { GroupBucketPanel } from '../components/recipes/GroupBucketPanel';
 import { RecipeCostSummary } from '../components/recipes/RecipeCostSummary';
 import { RecipeCostBreakdown } from '../components/recipes/RecipeCostBreakdown';
 import { RecipeVersionHistory } from '../components/recipes/RecipeVersionHistory';
@@ -29,6 +30,7 @@ import {
 import {
   RECIPE_CATEGORIES,
   RECIPE_STATUSES,
+  type CostBucket,
   type ExtraCost,
   type Recipe,
   type RecipeCategory,
@@ -65,6 +67,7 @@ interface DraftState {
   wastagePercentOverride: number;
   parentRecipeId: string;
   status: RecipeStatus;
+  groupBuckets: Record<string, CostBucket> | undefined;
 }
 
 function draftFromRecipe(recipe?: Recipe): DraftState {
@@ -83,6 +86,7 @@ function draftFromRecipe(recipe?: Recipe): DraftState {
     wastagePercentOverride: recipe?.wastagePercentOverride ?? NaN,
     parentRecipeId: recipe?.parentRecipeId ?? '',
     status: recipe?.status ?? 'Draft',
+    groupBuckets: recipe?.groupBuckets,
   };
 }
 
@@ -164,6 +168,16 @@ export function RecipeDetailPage() {
     return seen;
   }, [draft.ingredientLines, draft.extraCosts]);
 
+  const allGroupNames = useMemo(() => {
+    const seen: string[] = [];
+    const add = (name: string) => {
+      if (!seen.includes(name)) seen.push(name);
+    };
+    if (parentRecipe) getGroupNames(getEffectiveRecipe(parentRecipe, recipesById)).forEach(add);
+    draftGroupSuggestions.forEach(add);
+    return seen;
+  }, [parentRecipe, recipesById, draftGroupSuggestions]);
+
   const draftAsRecipe: Recipe = useMemo(
     () => ({
       id: recipe?.id ?? '',
@@ -185,6 +199,7 @@ export function RecipeDetailPage() {
         : undefined,
       parentRecipeId: draft.parentRecipeId || undefined,
       status: draft.status,
+      groupBuckets: draft.groupBuckets,
       createdAt: recipe?.createdAt ?? '',
       updatedAt: recipe?.updatedAt ?? '',
     }),
@@ -315,6 +330,7 @@ export function RecipeDetailPage() {
         : undefined,
       parentRecipeId: draft.parentRecipeId || undefined,
       status: draft.status,
+      groupBuckets: draft.groupBuckets,
       createdAt: recipe?.createdAt ?? now,
       updatedAt: now,
     };
@@ -366,6 +382,7 @@ export function RecipeDetailPage() {
         bakeTimeMinutes: saved.bakeTimeMinutes,
         ovenPowerWatts: saved.ovenPowerWatts,
         wastagePercentOverride: saved.wastagePercentOverride,
+        groupBuckets: saved.groupBuckets,
         createdAt: new Date().toISOString(),
       });
       showToast(`Saved as v${recipeVersions.length + 1}`, 'success');
@@ -589,6 +606,22 @@ export function RecipeDetailPage() {
               onChange={(extraCosts) => setDraft((d) => ({ ...d, extraCosts }))}
             />
           </div>
+
+          {allGroupNames.length > 0 && (
+            <div>
+              <h2 className="mb-2 text-sm font-semibold text-slate-800">
+                Groups &amp; cost buckets{' '}
+                <span className="font-normal text-slate-400">
+                  (which dashboard bucket each group's cost rolls into)
+                </span>
+              </h2>
+              <GroupBucketPanel
+                groupNames={allGroupNames}
+                groupBuckets={draft.groupBuckets}
+                onChange={(groupBuckets) => setDraft((d) => ({ ...d, groupBuckets }))}
+              />
+            </div>
+          )}
 
           <RecipeCostSummary result={baseCostResult} yieldLabel={draft.baseYieldLabel} />
           <RecipeCostBreakdown result={baseCostResult} />

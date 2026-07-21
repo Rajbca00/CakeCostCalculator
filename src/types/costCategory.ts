@@ -11,7 +11,9 @@ export const COST_CATEGORIES = [
 
 export type CostCategory = (typeof COST_CATEGORIES)[number];
 
-export type CostBucket = 'ingredients' | 'packaging' | 'overheads' | 'labour';
+export const COST_BUCKETS = ['ingredients', 'packaging', 'overheads', 'labour'] as const;
+
+export type CostBucket = (typeof COST_BUCKETS)[number];
 
 /** Which top-level dashboard bucket each fixed category rolls into. */
 export const CATEGORY_BUCKET: Record<CostCategory, CostBucket> = {
@@ -23,8 +25,6 @@ export const CATEGORY_BUCKET: Record<CostCategory, CostBucket> = {
   Overheads: 'overheads',
   Labour: 'labour',
 };
-
-export const COST_BUCKETS: CostBucket[] = ['ingredients', 'packaging', 'overheads', 'labour'];
 
 export const BUCKET_LABELS: Record<CostBucket, string> = {
   ingredients: 'Ingredients',

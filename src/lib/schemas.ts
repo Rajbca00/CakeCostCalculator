@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { COST_CATEGORIES } from '../types/costCategory';
+import { COST_BUCKETS, COST_CATEGORIES } from '../types/costCategory';
 import { RECIPE_CATEGORIES } from '../types/recipeCategory';
 import { RECIPE_STATUSES } from '../types/recipeStatus';
 import { PRICING_STRATEGIES } from '../types/pricingStrategy';
@@ -8,6 +8,7 @@ import { DEFAULT_BUSINESS_SETTINGS } from '../types/settings';
 export const UnitSchema = z.enum(['g', 'kg', 'oz', 'lb', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'piece']);
 
 export const CostCategorySchema = z.enum(COST_CATEGORIES);
+export const CostBucketSchema = z.enum(COST_BUCKETS);
 export const RecipeCategorySchema = z.enum(RECIPE_CATEGORIES);
 export const RecipeStatusSchema = z.enum(RECIPE_STATUSES);
 export const PricingStrategySchema = z.enum(PRICING_STRATEGIES);
@@ -57,6 +58,7 @@ export const RecipeSchema = z.object({
   wastagePercentOverride: z.number().optional(),
   parentRecipeId: z.string().optional(),
   status: RecipeStatusSchema.optional(),
+  groupBuckets: z.record(z.string(), CostBucketSchema).optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -79,6 +81,7 @@ export const RecipeVersionSchema = z.object({
   bakeTimeMinutes: z.number().optional(),
   ovenPowerWatts: z.number().optional(),
   wastagePercentOverride: z.number().optional(),
+  groupBuckets: z.record(z.string(), CostBucketSchema).optional(),
   createdAt: z.string(),
 });
 
