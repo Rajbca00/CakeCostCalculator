@@ -8,8 +8,10 @@ import { MoneyInput } from '../components/common/MoneyInput';
 import { TextInput } from '../components/common/TextInput';
 import { PackagingTemplateFormModal } from '../components/settings/PackagingTemplateFormModal';
 import { PackagingTemplateTable } from '../components/settings/PackagingTemplateTable';
-import { useAppDataContext, usePackagingTemplates, useSettings } from '../state/useAppData';
-import type { BusinessSettings, PackagingTemplate } from '../types';
+import { AddOnFormModal } from '../components/settings/AddOnFormModal';
+import { AddOnTable } from '../components/settings/AddOnTable';
+import { useAddOns, useAppDataContext, usePackagingTemplates, useSettings } from '../state/useAppData';
+import type { AddOn, BusinessSettings, PackagingTemplate } from '../types';
 import { isNonNegativeNumber } from '../lib/validation';
 
 function clampPercent(value: number): number {
@@ -20,8 +22,16 @@ function clampPercent(value: number): number {
 export function SettingsPage() {
   const settings = useSettings();
   const packagingTemplates = usePackagingTemplates();
-  const { updateSettings, addPackagingTemplate, updatePackagingTemplate, deletePackagingTemplate } =
-    useAppDataContext();
+  const addOns = useAddOns();
+  const {
+    updateSettings,
+    addPackagingTemplate,
+    updatePackagingTemplate,
+    deletePackagingTemplate,
+    addAddOn,
+    updateAddOn,
+    deleteAddOn,
+  } = useAppDataContext();
 
   const [form, setForm] = useState<BusinessSettings>(settings);
   const [saving, setSaving] = useState(false);
@@ -35,6 +45,11 @@ export function SettingsPage() {
   const [editingTemplate, setEditingTemplate] = useState<PackagingTemplate | undefined>(undefined);
   const [pendingDelete, setPendingDelete] = useState<PackagingTemplate | undefined>(undefined);
   const [deleting, setDeleting] = useState(false);
+
+  const [addOnModalOpen, setAddOnModalOpen] = useState(false);
+  const [editingAddOn, setEditingAddOn] = useState<AddOn | undefined>(undefined);
+  const [pendingDeleteAddOn, setPendingDeleteAddOn] = useState<AddOn | undefined>(undefined);
+  const [deletingAddOn, setDeletingAddOn] = useState(false);
 
   const errors = {
     laborHourlyRate: isNonNegativeNumber(form.laborHourlyRate) ? undefined : 'Enter a valid rate',
@@ -89,6 +104,37 @@ export function SettingsPage() {
       // failure toast already shown; keep dialog open so the user can retry
     } finally {
       setDeleting(false);
+    }
+  }
+
+  function openAddAddOn() {
+    setEditingAddOn(undefined);
+    setAddOnModalOpen(true);
+  }
+
+  function openEditAddOn(addOn: AddOn) {
+    setEditingAddOn(addOn);
+    setAddOnModalOpen(true);
+  }
+
+  async function handleSaveAddOn(addOn: AddOn) {
+    if (editingAddOn) {
+      await updateAddOn(addOn);
+    } else {
+      await addAddOn(addOn);
+    }
+  }
+
+  async function handleConfirmDeleteAddOn() {
+    if (!pendingDeleteAddOn) return;
+    setDeletingAddOn(true);
+    try {
+      await deleteAddOn(pendingDeleteAddOn.id);
+      setPendingDeleteAddOn(undefined);
+    } catch {
+      // failure toast already shown; keep dialog open so the user can retry
+    } finally {
+      setDeletingAddOn(false);
     }
   }
 
@@ -217,6 +263,44 @@ export function SettingsPage() {
         confirming={deleting}
         onConfirm={handleConfirmDeleteTemplate}
         onCancel={() => setPendingDelete(undefined)}
+      />
+
+      <div className="mb-4 mt-8 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-800">Add-ons</h2>
+          <p className="text-sm text-slate-500">
+            Reusable extras (e.g. "Nutella", "Custom Theme") attachable to a quote.
+          </p>
+        </div>
+        <Button onClick={openAddAddOn}>Add add-on</Button>
+      </div>
+
+      {addOns.length === 0 ? (
+        <EmptyState
+          title="No add-ons yet"
+          description='e.g. "Nutella", "Biscoff", "Custom Theme" -- each with its own cost and price.'
+          action={<Button onClick={openAddAddOn}>Add your first add-on</Button>}
+        />
+      ) : (
+        <AddOnTable addOns={addOns} onEdit={openEditAddOn} onDelete={setPendingDeleteAddOn} />
+      )}
+
+      <AddOnFormModal
+        open={addOnModalOpen}
+        addOn={editingAddOn}
+        onClose={() => setAddOnModalOpen(false)}
+        onSave={handleSaveAddOn}
+      />
+
+      <ConfirmDialog
+        open={!!pendingDeleteAddOn}
+        title={`Delete "${pendingDeleteAddOn?.name}"?`}
+        description="This cannot be undone."
+        confirmLabel="Delete"
+        danger
+        confirming={deletingAddOn}
+        onConfirm={handleConfirmDeleteAddOn}
+        onCancel={() => setPendingDeleteAddOn(undefined)}
       />
     </PageContainer>
   );

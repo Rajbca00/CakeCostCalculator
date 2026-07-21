@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Modal } from '../layout/Modal';
 import { Select } from '../common/Select';
 import { TextInput } from '../common/TextInput';
+import { NumberInput } from '../common/NumberInput';
+import { MoneyInput } from '../common/MoneyInput';
 import { Button } from '../common/Button';
 import { RecipeGroupFilter } from '../scaling/RecipeGroupFilter';
 import { RecipeScalePanel } from '../scaling/RecipeScalePanel';
@@ -9,18 +11,32 @@ import { getGroupNames } from '../../lib/recipeGroups';
 import { getEffectiveRecipe } from '../../lib/recipeHierarchy';
 import { suggestVariantName } from '../../lib/priceListing';
 import { isNonEmptyString, isPositiveNumber } from '../../lib/validation';
-import type { PriceListingVariant, Recipe } from '../../types';
+import {
+  PRICING_STRATEGIES,
+  PRICING_STRATEGY_LABELS,
+  type PackagingTemplate,
+  type PriceListingVariant,
+  type PricingStrategy,
+  type Recipe,
+} from '../../types';
 
 export interface VariantDialogInput {
   recipeId: string;
   name: string;
   groupNames: string[];
   multiplier: number;
+  servingSize?: string;
+  packagingTemplateId?: string;
+  pricingStrategy?: PricingStrategy;
+  fixedPrice?: number;
+  targetProfitAmount?: number;
+  targetFoodCostPercent?: number;
 }
 
 interface VariantDialogProps {
   open: boolean;
   recipes: Recipe[];
+  packagingTemplates: PackagingTemplate[];
   editingVariant?: PriceListingVariant;
   confirming?: boolean;
   onClose: () => void;
@@ -30,6 +46,7 @@ interface VariantDialogProps {
 export function VariantDialog({
   open,
   recipes,
+  packagingTemplates,
   editingVariant,
   confirming = false,
   onClose,
@@ -40,6 +57,12 @@ export function VariantDialog({
   const [multiplier, setMultiplier] = useState(1);
   const [name, setName] = useState('');
   const [nameEdited, setNameEdited] = useState(false);
+  const [servingSize, setServingSize] = useState('');
+  const [packagingTemplateId, setPackagingTemplateId] = useState('');
+  const [pricingStrategy, setPricingStrategy] = useState<PricingStrategy>('markup');
+  const [fixedPrice, setFixedPrice] = useState(NaN);
+  const [targetProfitAmount, setTargetProfitAmount] = useState(NaN);
+  const [targetFoodCostPercent, setTargetFoodCostPercent] = useState(NaN);
   const [touched, setTouched] = useState(false);
 
   useEffect(() => {
@@ -50,10 +73,22 @@ export function VariantDialog({
       setMultiplier(editingVariant.multiplier);
       setName(editingVariant.name);
       setNameEdited(true);
+      setServingSize(editingVariant.servingSize ?? '');
+      setPackagingTemplateId(editingVariant.packagingTemplateId ?? '');
+      setPricingStrategy(editingVariant.pricingStrategy ?? 'markup');
+      setFixedPrice(editingVariant.fixedPrice ?? NaN);
+      setTargetProfitAmount(editingVariant.targetProfitAmount ?? NaN);
+      setTargetFoodCostPercent(editingVariant.targetFoodCostPercent ?? NaN);
     } else {
       setRecipeId(recipes[0]?.id ?? '');
       setMultiplier(1);
       setNameEdited(false);
+      setServingSize('');
+      setPackagingTemplateId('');
+      setPricingStrategy('markup');
+      setFixedPrice(NaN);
+      setTargetProfitAmount(NaN);
+      setTargetFoodCostPercent(NaN);
     }
     setTouched(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -110,6 +145,14 @@ export function VariantDialog({
       name: name.trim(),
       groupNames: groupNames.filter((g) => selectedGroups.has(g)),
       multiplier,
+      servingSize: servingSize.trim() || undefined,
+      packagingTemplateId: packagingTemplateId || undefined,
+      pricingStrategy,
+      fixedPrice: Number.isFinite(fixedPrice) ? fixedPrice : undefined,
+      targetProfitAmount: Number.isFinite(targetProfitAmount) ? targetProfitAmount : undefined,
+      targetFoodCostPercent: Number.isFinite(targetFoodCostPercent)
+        ? targetFoodCostPercent
+        : undefined,
     });
   }
 
@@ -170,6 +213,58 @@ export function VariantDialog({
           }}
           error={touched ? errors.name : undefined}
         />
+
+        <TextInput
+          label="Serving size (optional)"
+          value={servingSize}
+          onChange={(e) => setServingSize(e.target.value)}
+          placeholder='e.g. "Serves 8-10"'
+        />
+
+        <Select
+          label="Packaging (optional)"
+          value={packagingTemplateId}
+          onChange={(e) => setPackagingTemplateId(e.target.value)}
+        >
+          <option value="">No packaging template</option>
+          {packagingTemplates.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
+          ))}
+        </Select>
+
+        <Select
+          label="Pricing strategy"
+          value={pricingStrategy}
+          onChange={(e) => setPricingStrategy(e.target.value as PricingStrategy)}
+        >
+          {PRICING_STRATEGIES.map((strategy) => (
+            <option key={strategy} value={strategy}>
+              {PRICING_STRATEGY_LABELS[strategy]}
+            </option>
+          ))}
+        </Select>
+
+        {pricingStrategy === 'fixed' && (
+          <MoneyInput label="Fixed price" value={fixedPrice} onValueChange={setFixedPrice} />
+        )}
+        {pricingStrategy === 'targetProfit' && (
+          <MoneyInput
+            label="Target profit amount"
+            value={targetProfitAmount}
+            onValueChange={setTargetProfitAmount}
+          />
+        )}
+        {pricingStrategy === 'foodCostPercent' && (
+          <NumberInput
+            label="Target food cost %"
+            value={targetFoodCostPercent}
+            onValueChange={(v) => setTargetFoodCostPercent(Math.min(100, Math.max(0, v)))}
+            min={1}
+            placeholder="e.g. 30"
+          />
+        )}
 
         <div className="mt-2 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose} disabled={confirming}>

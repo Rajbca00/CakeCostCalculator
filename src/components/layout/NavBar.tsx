@@ -28,6 +28,12 @@ export function NavBar() {
           <NavLink to="/price-listing" className={linkClass}>
             Price Listing
           </NavLink>
+          <NavLink to="/quotes" className={linkClass}>
+            Quotes
+          </NavLink>
+          <NavLink to="/dashboard" className={linkClass}>
+            Dashboard
+          </NavLink>
           <NavLink to="/settings" className={linkClass}>
             Settings
           </NavLink>

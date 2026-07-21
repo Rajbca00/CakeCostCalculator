@@ -5,6 +5,8 @@ import type { PriceListingVariant } from './priceListing';
 import type { BusinessSettings } from './settings';
 import { DEFAULT_BUSINESS_SETTINGS } from './settings';
 import type { PackagingTemplate } from './packagingTemplate';
+import type { AddOn } from './addOn';
+import type { Quote } from './quote';
 
 export interface AppDataV1 {
   schemaVersion: 1;
@@ -14,6 +16,8 @@ export interface AppDataV1 {
   priceListingVariants: PriceListingVariant[];
   settings: BusinessSettings;
   packagingTemplates: PackagingTemplate[];
+  addOns: AddOn[];
+  quotes: Quote[];
 }
 
 export type AppData = AppDataV1;
@@ -29,5 +33,7 @@ export function createEmptyAppData(): AppData {
     priceListingVariants: [],
     settings: DEFAULT_BUSINESS_SETTINGS,
     packagingTemplates: [],
+    addOns: [],
+    quotes: [],
   };
 }

@@ -1,12 +1,15 @@
 import { supabase } from './supabaseClient';
 import { DEFAULT_BUSINESS_SETTINGS } from '../types';
 import type {
+  AddOn,
   AppData,
   BusinessSettings,
   ExtraCost,
   Ingredient,
   PackagingTemplate,
   PriceListingVariant,
+  PricingStrategy,
+  Quote,
   Recipe,
   RecipeCategory,
   RecipeIngredientLine,
@@ -77,6 +80,38 @@ interface PriceListingVariantRow {
   name: string;
   group_names: string[];
   multiplier: number;
+  pricing_strategy: string | null;
+  fixed_price: number | null;
+  target_profit_amount: number | null;
+  target_food_cost_percent: number | null;
+  packaging_template_id: string | null;
+  serving_size: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface AddOnRow {
+  id: string;
+  user_id: string;
+  name: string;
+  additional_cost: number;
+  additional_selling_price: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface QuoteRow {
+  id: string;
+  user_id: string;
+  recipe_id: string;
+  variant_id: string | null;
+  add_on_ids: string[];
+  multiplier: number;
+  custom_label: string | null;
+  customer_name: string | null;
+  notes: string | null;
+  selling_price: number;
+  internal_cost: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -231,6 +266,12 @@ function rowToPriceListingVariant(row: PriceListingVariantRow): PriceListingVari
     name: row.name,
     groupNames: row.group_names,
     multiplier: row.multiplier,
+    pricingStrategy: (row.pricing_strategy as PricingStrategy | null) ?? undefined,
+    fixedPrice: row.fixed_price ?? undefined,
+    targetProfitAmount: row.target_profit_amount ?? undefined,
+    targetFoodCostPercent: row.target_food_cost_percent ?? undefined,
+    packagingTemplateId: row.packaging_template_id ?? undefined,
+    servingSize: row.serving_size ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -247,8 +288,72 @@ function priceListingVariantToRow(
     name: variant.name,
     group_names: variant.groupNames,
     multiplier: variant.multiplier,
+    pricing_strategy: variant.pricingStrategy ?? null,
+    fixed_price: variant.fixedPrice ?? null,
+    target_profit_amount: variant.targetProfitAmount ?? null,
+    target_food_cost_percent: variant.targetFoodCostPercent ?? null,
+    packaging_template_id: variant.packagingTemplateId ?? null,
+    serving_size: variant.servingSize ?? null,
     created_at: variant.createdAt,
     updated_at: variant.updatedAt,
+  };
+}
+
+function rowToAddOn(row: AddOnRow): AddOn {
+  return {
+    id: row.id,
+    name: row.name,
+    additionalCost: row.additional_cost,
+    additionalSellingPrice: row.additional_selling_price,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function addOnToRow(userId: string, addOn: AddOn): AddOnRow {
+  return {
+    id: addOn.id,
+    user_id: userId,
+    name: addOn.name,
+    additional_cost: addOn.additionalCost,
+    additional_selling_price: addOn.additionalSellingPrice,
+    created_at: addOn.createdAt,
+    updated_at: addOn.updatedAt,
+  };
+}
+
+function rowToQuote(row: QuoteRow): Quote {
+  return {
+    id: row.id,
+    recipeId: row.recipe_id,
+    variantId: row.variant_id ?? undefined,
+    addOnIds: row.add_on_ids,
+    multiplier: row.multiplier,
+    customLabel: row.custom_label ?? undefined,
+    customerName: row.customer_name ?? undefined,
+    notes: row.notes ?? undefined,
+    sellingPrice: row.selling_price,
+    internalCost: row.internal_cost ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function quoteToRow(userId: string, quote: Quote): QuoteRow {
+  return {
+    id: quote.id,
+    user_id: userId,
+    recipe_id: quote.recipeId,
+    variant_id: quote.variantId ?? null,
+    add_on_ids: quote.addOnIds,
+    multiplier: quote.multiplier,
+    custom_label: quote.customLabel ?? null,
+    customer_name: quote.customerName ?? null,
+    notes: quote.notes ?? null,
+    selling_price: quote.sellingPrice,
+    internal_cost: quote.internalCost ?? null,
+    created_at: quote.createdAt,
+    updated_at: quote.updatedAt,
   };
 }
 
@@ -317,6 +422,8 @@ export async function fetchAllData(userId: string): Promise<AppData> {
     settingsResult,
     packagingTemplatesResult,
     recipeVersionsResult,
+    addOnsResult,
+    quotesResult,
   ] = await Promise.all([
     supabase.from('ingredients').select('*').eq('user_id', userId),
     supabase.from('recipes').select('*').eq('user_id', userId),
@@ -324,6 +431,8 @@ export async function fetchAllData(userId: string): Promise<AppData> {
     supabase.from('business_settings').select('*').eq('user_id', userId).maybeSingle(),
     supabase.from('packaging_templates').select('*').eq('user_id', userId),
     supabase.from('recipe_versions').select('*').eq('user_id', userId),
+    supabase.from('add_ons').select('*').eq('user_id', userId),
+    supabase.from('quotes').select('*').eq('user_id', userId),
   ]);
 
   if (ingredientsResult.error) throw ingredientsResult.error;
@@ -332,6 +441,8 @@ export async function fetchAllData(userId: string): Promise<AppData> {
   if (recipeVersionsResult.error) throw recipeVersionsResult.error;
   if (settingsResult.error) throw settingsResult.error;
   if (packagingTemplatesResult.error) throw packagingTemplatesResult.error;
+  if (addOnsResult.error) throw addOnsResult.error;
+  if (quotesResult.error) throw quotesResult.error;
 
   return {
     schemaVersion: 1,
@@ -347,6 +458,8 @@ export async function fetchAllData(userId: string): Promise<AppData> {
       rowToPackagingTemplate,
     ),
     recipeVersions: (recipeVersionsResult.data as RecipeVersionRow[]).map(rowToRecipeVersion),
+    addOns: (addOnsResult.data as AddOnRow[]).map(rowToAddOn),
+    quotes: (quotesResult.data as QuoteRow[]).map(rowToQuote),
   };
 }
 
@@ -467,6 +580,35 @@ export async function insertRecipeVersionRow(userId: string, version: RecipeVers
   if (error) throw error;
 }
 
+export async function insertAddOnRow(userId: string, addOn: AddOn): Promise<void> {
+  const { error } = await supabase.from('add_ons').insert(addOnToRow(userId, addOn));
+  if (error) throw error;
+}
+
+export async function updateAddOnRow(userId: string, addOn: AddOn): Promise<void> {
+  const { error } = await supabase
+    .from('add_ons')
+    .update(addOnToRow(userId, addOn))
+    .eq('id', addOn.id)
+    .eq('user_id', userId);
+  if (error) throw error;
+}
+
+export async function deleteAddOnRow(userId: string, id: string): Promise<void> {
+  const { error } = await supabase.from('add_ons').delete().eq('id', id).eq('user_id', userId);
+  if (error) throw error;
+}
+
+export async function insertQuoteRow(userId: string, quote: Quote): Promise<void> {
+  const { error } = await supabase.from('quotes').insert(quoteToRow(userId, quote));
+  if (error) throw error;
+}
+
+export async function deleteQuoteRow(userId: string, id: string): Promise<void> {
+  const { error } = await supabase.from('quotes').delete().eq('id', id).eq('user_id', userId);
+  if (error) throw error;
+}
+
 export async function replaceAllRows(userId: string, data: AppData): Promise<void> {
   const [
     deleteIngredients,
@@ -474,18 +616,24 @@ export async function replaceAllRows(userId: string, data: AppData): Promise<voi
     deletePriceListingVariants,
     deletePackagingTemplates,
     deleteRecipeVersions,
+    deleteAddOns,
+    deleteQuotes,
   ] = await Promise.all([
     supabase.from('ingredients').delete().eq('user_id', userId),
     supabase.from('recipes').delete().eq('user_id', userId),
     supabase.from('price_listing_variants').delete().eq('user_id', userId),
     supabase.from('packaging_templates').delete().eq('user_id', userId),
     supabase.from('recipe_versions').delete().eq('user_id', userId),
+    supabase.from('add_ons').delete().eq('user_id', userId),
+    supabase.from('quotes').delete().eq('user_id', userId),
   ]);
   if (deleteIngredients.error) throw deleteIngredients.error;
   if (deleteRecipes.error) throw deleteRecipes.error;
   if (deletePriceListingVariants.error) throw deletePriceListingVariants.error;
   if (deletePackagingTemplates.error) throw deletePackagingTemplates.error;
   if (deleteRecipeVersions.error) throw deleteRecipeVersions.error;
+  if (deleteAddOns.error) throw deleteAddOns.error;
+  if (deleteQuotes.error) throw deleteQuotes.error;
 
   if (data.ingredients.length > 0) {
     const { error } = await supabase
@@ -513,22 +661,36 @@ export async function replaceAllRows(userId: string, data: AppData): Promise<voi
       if (error) throw error;
     }
   }
-  if (data.priceListingVariants.length > 0) {
-    const { error } = await supabase
-      .from('price_listing_variants')
-      .insert(data.priceListingVariants.map((v) => priceListingVariantToRow(userId, v)));
-    if (error) throw error;
-  }
+  // Packaging templates must exist before menu items (which may reference them) are inserted.
   if (data.packagingTemplates.length > 0) {
     const { error } = await supabase
       .from('packaging_templates')
       .insert(data.packagingTemplates.map((t) => packagingTemplateToRow(userId, t)));
     if (error) throw error;
   }
+  if (data.priceListingVariants.length > 0) {
+    const { error } = await supabase
+      .from('price_listing_variants')
+      .insert(data.priceListingVariants.map((v) => priceListingVariantToRow(userId, v)));
+    if (error) throw error;
+  }
   if (data.recipeVersions.length > 0) {
     const { error } = await supabase
       .from('recipe_versions')
       .insert(data.recipeVersions.map((v) => recipeVersionToRow(userId, v)));
+    if (error) throw error;
+  }
+  if (data.addOns.length > 0) {
+    const { error } = await supabase
+      .from('add_ons')
+      .insert(data.addOns.map((a) => addOnToRow(userId, a)));
+    if (error) throw error;
+  }
+  // Quotes may reference a menu item, so they're inserted last.
+  if (data.quotes.length > 0) {
+    const { error } = await supabase
+      .from('quotes')
+      .insert(data.quotes.map((q) => quoteToRow(userId, q)));
     if (error) throw error;
   }
   await upsertBusinessSettingsRow(userId, data.settings);

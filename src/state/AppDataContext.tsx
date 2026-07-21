@@ -1,11 +1,13 @@
 import { createContext, useContext, useEffect, useReducer, useState, type ReactNode } from 'react';
 import {
+  type AddOn,
   type AppData,
   type BusinessSettings,
   createEmptyAppData,
   type Ingredient,
   type PackagingTemplate,
   type PriceListingVariant,
+  type Quote,
   type Recipe,
   type RecipeVersion,
 } from '../types';
@@ -13,17 +15,22 @@ import { appDataReducer } from './appDataReducer';
 import { useAuth } from './AuthContext';
 import { useToast } from '../components/layout/Toast';
 import {
+  deleteAddOnRow,
   deleteIngredientRow,
   deletePackagingTemplateRow,
   deletePriceListingVariantRow,
+  deleteQuoteRow,
   deleteRecipeRow,
   fetchAllData,
+  insertAddOnRow,
   insertIngredientRow,
   insertPackagingTemplateRow,
   insertPriceListingVariantRow,
+  insertQuoteRow,
   insertRecipeRow,
   insertRecipeVersionRow,
   replaceAllRows,
+  updateAddOnRow,
   updateIngredientRow,
   updatePackagingTemplateRow,
   updatePriceListingVariantRow,
@@ -38,6 +45,8 @@ interface AppDataContextValue {
   settings: BusinessSettings;
   packagingTemplates: PackagingTemplate[];
   recipeVersions: RecipeVersion[];
+  addOns: AddOn[];
+  quotes: Quote[];
   isLoading: boolean;
   addIngredient: (ingredient: Ingredient) => Promise<void>;
   updateIngredient: (ingredient: Ingredient) => Promise<void>;
@@ -53,6 +62,11 @@ interface AppDataContextValue {
   updatePackagingTemplate: (template: PackagingTemplate) => Promise<void>;
   deletePackagingTemplate: (id: string) => Promise<void>;
   addRecipeVersion: (version: RecipeVersion) => Promise<void>;
+  addAddOn: (addOn: AddOn) => Promise<void>;
+  updateAddOn: (addOn: AddOn) => Promise<void>;
+  deleteAddOn: (id: string) => Promise<void>;
+  addQuote: (quote: Quote) => Promise<void>;
+  deleteQuote: (id: string) => Promise<void>;
   replaceAllData: (data: AppData) => Promise<void>;
   getSnapshot: () => AppData;
 }
@@ -282,6 +296,72 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function addAddOn(addOn: AddOn): Promise<void> {
+    dispatch({ type: 'ADD_ADD_ON', addOn });
+    if (!user) return;
+    try {
+      await insertAddOnRow(user.id, addOn);
+      showToast(`"${addOn.name}" added`, 'success');
+    } catch {
+      showToast('Could not save the add-on. Refreshing…', 'error');
+      await resync();
+      throw new Error('Failed to save add-on');
+    }
+  }
+
+  async function updateAddOn(addOn: AddOn): Promise<void> {
+    dispatch({ type: 'UPDATE_ADD_ON', addOn });
+    if (!user) return;
+    try {
+      await updateAddOnRow(user.id, addOn);
+      showToast(`"${addOn.name}" updated`, 'success');
+    } catch {
+      showToast('Could not save the change. Refreshing…', 'error');
+      await resync();
+      throw new Error('Failed to update add-on');
+    }
+  }
+
+  async function deleteAddOn(id: string): Promise<void> {
+    const name = state.addOns.find((a) => a.id === id)?.name ?? 'Add-on';
+    dispatch({ type: 'DELETE_ADD_ON', id });
+    if (!user) return;
+    try {
+      await deleteAddOnRow(user.id, id);
+      showToast(`"${name}" deleted`, 'success');
+    } catch {
+      showToast('Could not delete the add-on. Refreshing…', 'error');
+      await resync();
+      throw new Error('Failed to delete add-on');
+    }
+  }
+
+  async function addQuote(quote: Quote): Promise<void> {
+    dispatch({ type: 'ADD_QUOTE', quote });
+    if (!user) return;
+    try {
+      await insertQuoteRow(user.id, quote);
+      showToast('Quote saved', 'success');
+    } catch {
+      showToast('Could not save the quote. Refreshing…', 'error');
+      await resync();
+      throw new Error('Failed to save quote');
+    }
+  }
+
+  async function deleteQuote(id: string): Promise<void> {
+    dispatch({ type: 'DELETE_QUOTE', id });
+    if (!user) return;
+    try {
+      await deleteQuoteRow(user.id, id);
+      showToast('Quote deleted', 'success');
+    } catch {
+      showToast('Could not delete the quote. Refreshing…', 'error');
+      await resync();
+      throw new Error('Failed to delete quote');
+    }
+  }
+
   async function replaceAllData(data: AppData): Promise<void> {
     dispatch({ type: 'LOAD', data });
     if (!user) return;
@@ -295,6 +375,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     settings: state.settings,
     packagingTemplates: state.packagingTemplates,
     recipeVersions: state.recipeVersions,
+    addOns: state.addOns,
+    quotes: state.quotes,
     isLoading,
     addIngredient,
     updateIngredient,
@@ -310,6 +392,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     updatePackagingTemplate,
     deletePackagingTemplate,
     addRecipeVersion,
+    addAddOn,
+    updateAddOn,
+    deleteAddOn,
+    addQuote,
+    deleteQuote,
     replaceAllData,
     getSnapshot: () => state,
   };

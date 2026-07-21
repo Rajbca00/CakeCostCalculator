@@ -1,5 +1,5 @@
 import { BUCKET_LABELS, COST_BUCKETS } from '../../types';
-import { foodCostPercent, type RecipeCostResult } from '../../lib/costCalculations';
+import { foodCostPercent, round2, type RecipeCostResult } from '../../lib/costCalculations';
 import { formatCurrency } from '../../lib/format';
 
 interface RecipeCostBreakdownProps {
@@ -14,19 +14,35 @@ interface RecipeCostBreakdownProps {
 export function RecipeCostBreakdown({ result }: RecipeCostBreakdownProps) {
   const hasAutomaticCosts =
     result.laborAmount > 0 || result.electricityAmount > 0 || result.wastageAmount > 0;
+  const bucketSum = COST_BUCKETS.reduce((sum, bucket) => sum + result.bucketTotals[bucket], 0);
 
   return (
     <div className="rounded-lg border border-dashed border-slate-300 p-4 text-sm">
       <p className="mb-2 font-semibold text-slate-800">Cost breakdown</p>
-      <div className="flex flex-col gap-1">
-        {COST_BUCKETS.map((bucket) => (
-          <div key={bucket} className="flex justify-between py-0.5">
-            <span className="text-slate-600">{BUCKET_LABELS[bucket]}</span>
-            <span className="font-medium text-slate-800">
-              {formatCurrency(result.bucketTotals[bucket])}
-            </span>
-          </div>
-        ))}
+      <div className="flex flex-col gap-2">
+        {COST_BUCKETS.map((bucket) => {
+          const amount = result.bucketTotals[bucket];
+          const share = bucketSum > 0 ? round2((amount / bucketSum) * 100) : 0;
+          return (
+            <div key={bucket}>
+              <div className="flex justify-between py-0.5">
+                <span className="text-slate-600">{BUCKET_LABELS[bucket]}</span>
+                <span className="font-medium text-slate-800">
+                  {formatCurrency(amount)}
+                  {bucketSum > 0 && <span className="ml-1 text-xs text-slate-400">({share}%)</span>}
+                </span>
+              </div>
+              {bucketSum > 0 && (
+                <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className="h-full rounded-full bg-rose-500"
+                    style={{ width: `${share}%` }}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
         {result.wastageAmount > 0 && (
           <div className="flex justify-between py-0.5 text-amber-700">
             <span>Wastage ({result.wastagePercent}%)</span>

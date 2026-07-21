@@ -10,13 +10,14 @@ import { PriceListingMenu } from '../components/priceListing/PriceListingMenu';
 import {
   useAppDataContext,
   useIngredientsById,
+  usePackagingTemplates,
   usePriceListingVariants,
   useRecipes,
   useSettings,
 } from '../state/useAppData';
 import type { PriceListingVariant } from '../types';
 import { generateId } from '../lib/id';
-import { calculateVariantCost } from '../lib/priceListing';
+import { calculateVariantCost, calculateVariantSellingPrice } from '../lib/priceListing';
 import { formatCurrency } from '../lib/format';
 import { captureElementAsPng, shareOrDownloadImage } from '../lib/shareImage';
 import { useToast } from '../components/layout/Toast';
@@ -26,6 +27,7 @@ export function PriceListingPage() {
   const recipes = useRecipes();
   const ingredientsById = useIngredientsById();
   const variants = usePriceListingVariants();
+  const packagingTemplates = usePackagingTemplates();
   const settings = useSettings();
   const { addPriceListingVariant, updatePriceListingVariant, deletePriceListingVariant } =
     useAppDataContext();
@@ -84,6 +86,12 @@ export function PriceListingPage() {
           name: input.name,
           groupNames: input.groupNames,
           multiplier: input.multiplier,
+          servingSize: input.servingSize,
+          packagingTemplateId: input.packagingTemplateId,
+          pricingStrategy: input.pricingStrategy,
+          fixedPrice: input.fixedPrice,
+          targetProfitAmount: input.targetProfitAmount,
+          targetFoodCostPercent: input.targetFoodCostPercent,
           updatedAt: new Date().toISOString(),
         });
       } else {
@@ -94,6 +102,12 @@ export function PriceListingPage() {
           name: input.name,
           groupNames: input.groupNames,
           multiplier: input.multiplier,
+          servingSize: input.servingSize,
+          packagingTemplateId: input.packagingTemplateId,
+          pricingStrategy: input.pricingStrategy,
+          fixedPrice: input.fixedPrice,
+          targetProfitAmount: input.targetProfitAmount,
+          targetFoodCostPercent: input.targetFoodCostPercent,
           createdAt: now,
           updatedAt: now,
         });
@@ -193,7 +207,8 @@ export function PriceListingPage() {
                       <span className="min-w-0">
                         <p className="font-medium text-slate-900">{variant.name}</p>
                         <p className="text-sm text-slate-500">
-                          {recipe.name} · {formatCurrency(result.sellingTotal)}
+                          {recipe.name} ·{' '}
+                          {formatCurrency(calculateVariantSellingPrice(variant, result))}
                           {result.hasMissingIngredients && (
                             <span className="ml-2 text-amber-600">⚠ missing ingredient</span>
                           )}
@@ -245,6 +260,7 @@ export function PriceListingPage() {
       <VariantDialog
         open={dialogOpen}
         recipes={recipes}
+        packagingTemplates={packagingTemplates}
         editingVariant={editingVariant}
         confirming={saving}
         onClose={() => setDialogOpen(false)}

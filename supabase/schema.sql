@@ -87,6 +87,43 @@ create table if not exists packaging_templates (
   updated_at timestamptz not null
 );
 
+-- Bakery v2 Phase 3: pricing strategies + packaging/serving-size on menu items.
+-- pricing_strategy null behaves exactly like the pre-Phase-3 default ('markup'),
+-- so existing menu items keep showing the same price. packaging_template_id uses
+-- "on delete set null" -- deleting a packaging template must never delete a menu item.
+alter table price_listing_variants add column if not exists pricing_strategy text;
+alter table price_listing_variants add column if not exists fixed_price numeric;
+alter table price_listing_variants add column if not exists target_profit_amount numeric;
+alter table price_listing_variants add column if not exists target_food_cost_percent numeric;
+alter table price_listing_variants add column if not exists packaging_template_id uuid references packaging_templates(id) on delete set null;
+alter table price_listing_variants add column if not exists serving_size text;
+
+create table if not exists add_ons (
+  id uuid primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  additional_cost numeric not null default 0,
+  additional_selling_price numeric not null default 0,
+  created_at timestamptz not null,
+  updated_at timestamptz not null
+);
+
+create table if not exists quotes (
+  id uuid primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  recipe_id uuid not null references recipes(id) on delete cascade,
+  variant_id uuid references price_listing_variants(id) on delete set null,
+  add_on_ids jsonb not null default '[]',
+  multiplier numeric not null default 1,
+  custom_label text,
+  customer_name text,
+  notes text,
+  selling_price numeric not null default 0,
+  internal_cost numeric,
+  created_at timestamptz not null,
+  updated_at timestamptz not null
+);
+
 -- Read-only checkpoints of a recipe's own fields, created by "Save new version".
 -- Cascades with the recipe: deleting a recipe deletes its version history too.
 create table if not exists recipe_versions (
@@ -119,6 +156,9 @@ create index if not exists price_listing_variants_recipe_id_idx on price_listing
 create index if not exists packaging_templates_user_id_idx on packaging_templates(user_id);
 create index if not exists recipe_versions_user_id_idx on recipe_versions(user_id);
 create index if not exists recipe_versions_recipe_id_idx on recipe_versions(recipe_id);
+create index if not exists add_ons_user_id_idx on add_ons(user_id);
+create index if not exists quotes_user_id_idx on quotes(user_id);
+create index if not exists quotes_recipe_id_idx on quotes(recipe_id);
 
 alter table ingredients enable row level security;
 alter table recipes enable row level security;
@@ -126,6 +166,8 @@ alter table price_listing_variants enable row level security;
 alter table business_settings enable row level security;
 alter table packaging_templates enable row level security;
 alter table recipe_versions enable row level security;
+alter table add_ons enable row level security;
+alter table quotes enable row level security;
 
 create policy "Users manage their own ingredients" on ingredients
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -143,4 +185,10 @@ create policy "Users manage their own packaging templates" on packaging_template
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 create policy "Users manage their own recipe versions" on recipe_versions
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "Users manage their own add-ons" on add_ons
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "Users manage their own quotes" on quotes
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);

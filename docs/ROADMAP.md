@@ -121,28 +121,53 @@ child's historical cost at a given version can't be reconstructed exactly if
 its parent changed in the meantime -- flagged in the roadmap rather than
 solved now, since fixing it means snapshotting the whole ancestor chain.
 
-### Phase 3 — Pricing & Customer Menu (not started)
-- Selling price strategies per recipe: Fixed Price, Markup %, Target
-  Profit, Food Cost % — user picks the strategy; recipe cost stays
-  internal-only.
-- Product Variants (0.5kg/1kg cake, box of 4/8 cupcakes, etc.): selling
-  price + serving size + packaging template, without duplicating the
-  recipe. Existing `price_listing_variants` migrate into this table.
-- Add-ons (Nutella, Biscoff, Ganache, Dry Fruits, Custom Theme): additional
-  cost + additional selling price, attachable to a variant/quote.
-- Customer Menu Generator: Cake Menu / Cupcake Menu / Brownie Menu views
-  showing product, description, sizes, and prices — cost figures never
-  rendered. Replaces the current Price Listing export flow (same "export
-  as image" capability, built on the new variant model).
-- Quote Builder: pick a recipe + variant + add-ons, auto-price it,
-  produce a shareable quote.
+### Phase 3 — Pricing & Customer Menu (shipped)
+- **Pricing strategies** (`lib/pricingStrategy.ts#resolveVariantPrice`): each
+  menu item (`PriceListingVariant`) picks one of Fixed Price, Markup %
+  (default, uses the recipe's own Profit % exactly like before), Target
+  Profit amount, or Target Food Cost % — `pricingStrategy` unset behaves
+  identically to pre-Phase-3 behavior, so existing menu items don't change
+  price.
+- **Product Variants**: extended the existing `price_listing_variants`
+  table in place (rather than migrating to a parallel table) with
+  `servingSize`, `packagingTemplateId`, and the pricing-strategy fields --
+  additive columns, no data migration needed, no menu items lost. Building
+  a physically separate "product_variants" table was considered and
+  rejected: it would have required a migration step with real failure risk
+  for zero functional benefit over extending the existing table.
+- **Add-ons**: new reusable catalog (name, additional cost, additional
+  selling price) managed on the Settings page, attachable to a quote.
+- **Customer Menu Generator**: folded into the existing Price Listing page
+  rather than a new screen -- the menu view now groups items by the
+  underlying recipe's category into "Cake Menu" / "Cupcake Menu" / etc.
+  sections, shows serving size, and prices via the chosen pricing strategy.
+  Cost is still never shown here (unchanged from before).
+- **Quote Builder** (`/quotes`): pick a recipe (optionally one of its saved
+  menu items/sizes), toggle add-ons, add a customization note + customer
+  name, get an auto-calculated price. Cost is shown to the *owner* while
+  composing (to help them price it) but the exportable/shareable quote
+  card never includes cost -- only product, customization, and price.
+  Saved quotes are listed for record-keeping with delete (no edit --
+  if a quote's wrong, delete and requote, matching how a real quote
+  workflow works).
 
-### Phase 4 — Business Intelligence & UI (not started)
-- Business Dashboard: total recipes, most profitable product, ingredient
-  cost %, labour %, packaging %, monthly profit, low-margin products.
-- UI: reusable card/dialog components, recipe search + filters, category
-  grouping, expandable recipe trees, cost breakdown charts/progress bars,
-  mobile-friendly layouts throughout.
+### Phase 4 — Business Intelligence & UI (shipped)
+- **Business Dashboard** (`/dashboard`): total recipes, most profitable
+  recipe by margin %, blended Ingredient/Labour/Packaging/Overheads cost %
+  across all recipes (weighted by actual cost, not a plain average), and a
+  low-margin products list (<20% margin). **"Monthly profit" is
+  intentionally not shown** -- it requires real sales/order data (what sold,
+  when), which this app has no way to track yet (that's Phase 5+ territory:
+  Invoice Generation, etc.). Showing a number without that data would be a
+  guess dressed up as a metric, so it's omitted with an explanation instead
+  of faked.
+- **UI**: added a proportion bar chart to the existing cost-breakdown panel
+  (Ingredients/Packaging/Overheads/Labour share of cost). Recipe search,
+  category/status filtering, category grouping, and the expandable
+  parent → children tree were already delivered in Phase 2's Recipe Book,
+  so there was nothing left to add there. Reusable cards/dialogs and
+  mobile-responsive layouts were already the existing pattern throughout
+  (Button/Modal/Select/EmptyState + Tailwind `sm:`/`lg:` breakpoints).
 
 ### Phase 5 — Future-Ready Schema (design-only, not started)
 No user-facing features yet — just making sure Phase 1–4 tables have the
@@ -158,6 +183,6 @@ another migration:
 |---|---|
 | 1. Foundation | Shipped |
 | 2. Hierarchy & Versioning | Shipped |
-| 3. Pricing & Customer Menu | Not started |
-| 4. Business Intelligence & UI | Not started |
+| 3. Pricing & Customer Menu | Shipped |
+| 4. Business Intelligence & UI | Shipped |
 | 5. Future-Ready Schema | Not started |

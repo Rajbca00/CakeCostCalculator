@@ -1,6 +1,7 @@
 import { calculateRecipeCost, type RecipeCostResult } from './costCalculations';
 import { getGroupNames } from './recipeGroups';
 import { getEffectiveRecipe } from './recipeHierarchy';
+import { resolveVariantPrice } from './pricingStrategy';
 import type { BusinessSettings, Ingredient, PriceListingVariant, Recipe } from '../types';
 
 export function calculateVariantCost(
@@ -18,6 +19,20 @@ export function calculateVariantCost(
     new Set(variant.groupNames),
     0,
     settings,
+  );
+}
+
+/** The customer-facing selling price for a menu item, per its chosen pricing strategy. */
+export function calculateVariantSellingPrice(
+  variant: PriceListingVariant,
+  costResult: RecipeCostResult,
+): number {
+  return resolveVariantPrice(
+    costResult,
+    variant.pricingStrategy,
+    variant.fixedPrice,
+    variant.targetProfitAmount,
+    variant.targetFoodCostPercent,
   );
 }
 
