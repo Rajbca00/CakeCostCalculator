@@ -12,6 +12,9 @@ create table if not exists ingredients (
   updated_at timestamptz not null
 );
 
+-- Drives the Egg/Eggless flag shown on any recipe that uses this ingredient.
+alter table ingredients add column if not exists contains_egg boolean;
+
 create table if not exists recipes (
   id uuid primary key,
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -81,26 +84,20 @@ create table if not exists business_settings (
   updated_at timestamptz not null
 );
 
-create table if not exists packaging_templates (
-  id uuid primary key,
-  user_id uuid not null references auth.users(id) on delete cascade,
-  name text not null,
-  cost numeric not null,
-  description text,
-  created_at timestamptz not null,
-  updated_at timestamptz not null
-);
-
--- Bakery v2 Phase 3: pricing strategies + packaging/serving-size on menu items.
+-- Bakery v2 Phase 3: pricing strategies + serving-size on menu items.
 -- pricing_strategy null behaves exactly like the pre-Phase-3 default ('markup'),
--- so existing menu items keep showing the same price. packaging_template_id uses
--- "on delete set null" -- deleting a packaging template must never delete a menu item.
+-- so existing menu items keep showing the same price.
 alter table price_listing_variants add column if not exists pricing_strategy text;
 alter table price_listing_variants add column if not exists fixed_price numeric;
 alter table price_listing_variants add column if not exists target_profit_amount numeric;
 alter table price_listing_variants add column if not exists target_food_cost_percent numeric;
-alter table price_listing_variants add column if not exists packaging_template_id uuid references packaging_templates(id) on delete set null;
 alter table price_listing_variants add column if not exists serving_size text;
+
+-- Packaging Templates were removed: a template's cost was never actually wired
+-- into any price calculation (see docs/ROADMAP.md), so the feature was dropped
+-- rather than fixed. If you have an existing `packaging_templates` table and
+-- `price_listing_variants.packaging_template_id` column from before this change,
+-- see the manual cleanup snippet at the bottom of this file to drop them.
 
 create table if not exists add_ons (
   id uuid primary key,
@@ -158,7 +155,6 @@ create index if not exists recipes_user_id_idx on recipes(user_id);
 create index if not exists recipes_parent_recipe_id_idx on recipes(parent_recipe_id);
 create index if not exists price_listing_variants_user_id_idx on price_listing_variants(user_id);
 create index if not exists price_listing_variants_recipe_id_idx on price_listing_variants(recipe_id);
-create index if not exists packaging_templates_user_id_idx on packaging_templates(user_id);
 create index if not exists recipe_versions_user_id_idx on recipe_versions(user_id);
 create index if not exists recipe_versions_recipe_id_idx on recipe_versions(recipe_id);
 create index if not exists add_ons_user_id_idx on add_ons(user_id);
@@ -169,7 +165,6 @@ alter table ingredients enable row level security;
 alter table recipes enable row level security;
 alter table price_listing_variants enable row level security;
 alter table business_settings enable row level security;
-alter table packaging_templates enable row level security;
 alter table recipe_versions enable row level security;
 alter table add_ons enable row level security;
 alter table quotes enable row level security;
@@ -192,10 +187,6 @@ drop policy if exists "Users manage their own business settings" on business_set
 create policy "Users manage their own business settings" on business_settings
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
-drop policy if exists "Users manage their own packaging templates" on packaging_templates;
-create policy "Users manage their own packaging templates" on packaging_templates
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-
 drop policy if exists "Users manage their own recipe versions" on recipe_versions;
 create policy "Users manage their own recipe versions" on recipe_versions
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -207,3 +198,12 @@ create policy "Users manage their own add-ons" on add_ons
 drop policy if exists "Users manage their own quotes" on quotes;
 create policy "Users manage their own quotes" on quotes
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ---------------------------------------------------------------------------
+-- Optional one-off cleanup: only needed if you ran this file before Packaging
+-- Templates were removed from the app. Not run automatically -- it deletes any
+-- packaging template rows you already created, so run it yourself only once
+-- you're sure you don't need that data.
+-- ---------------------------------------------------------------------------
+-- alter table price_listing_variants drop column if exists packaging_template_id;
+-- drop table if exists packaging_templates;

@@ -22,8 +22,6 @@ export interface PriceListingVariant {
   targetProfitAmount?: number;
   /** Used when pricingStrategy is 'foodCostPercent': desired ingredient cost as a % of the selling price. */
   targetFoodCostPercent?: number;
-  /** Optional link to a reusable packaging option (see PackagingTemplate). */
-  packagingTemplateId?: string;
   /** Optional descriptor shown on the menu, e.g. "Serves 8-10" -- distinct from `name`. */
   servingSize?: string;
   createdAt: string;

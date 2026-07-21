@@ -20,6 +20,7 @@ export const IngredientSchema = z.object({
   purchaseQuantity: z.number(),
   purchaseUnit: UnitSchema,
   notes: z.string().optional(),
+  containsEgg: z.boolean().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -95,7 +96,6 @@ export const PriceListingVariantSchema = z.object({
   fixedPrice: z.number().optional(),
   targetProfitAmount: z.number().optional(),
   targetFoodCostPercent: z.number().optional(),
-  packagingTemplateId: z.string().optional(),
   servingSize: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -111,15 +111,6 @@ export const BusinessSettingsSchema = z.object({
   currencyCode: z.string(),
   currencySymbol: z.string(),
   taxPercent: z.number(),
-  updatedAt: z.string(),
-});
-
-export const PackagingTemplateSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  cost: z.number(),
-  description: z.string().optional(),
-  createdAt: z.string(),
   updatedAt: z.string(),
 });
 
@@ -153,7 +144,6 @@ export const AppDataImportSchema = z.object({
   recipes: z.array(RecipeSchema),
   priceListingVariants: z.array(PriceListingVariantSchema).default([]),
   settings: BusinessSettingsSchema.default(DEFAULT_BUSINESS_SETTINGS),
-  packagingTemplates: z.array(PackagingTemplateSchema).default([]),
   recipeVersions: z.array(RecipeVersionSchema).default([]),
   addOns: z.array(AddOnSchema).default([]),
   quotes: z.array(QuoteSchema).default([]),

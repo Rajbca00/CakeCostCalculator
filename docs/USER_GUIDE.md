@@ -9,7 +9,7 @@ The mental model, top to bottom:
 ```
 Ingredients  →  Recipes (with parent/child + versions)  →  Price Listing (customer menu)  →  Quotes
                                      ↓
-                                Settings + Packaging Templates + Add-ons feed all of the above
+                                   Settings + Add-ons feed all of the above
 ```
 
 ---
@@ -36,11 +36,13 @@ real labour and electricity cost — no manual entry per recipe.
 
 Also on this page:
 
-- **Packaging templates** — reusable packaging options with their own cost.
-  Add `0.5 Kg Cake Box` (₹25) and `1 Kg Cake Box` (₹40).
 - **Add-ons** — optional extras customers can add to a quote, each with its
   own cost and selling price. Add `Nutella Filling` (cost ₹40, sells for
   ₹80) and `Custom Theme Topper` (cost ₹60, sells for ₹150).
+
+> For a flat packaging cost (e.g. a ₹30 box), add it as an **Extra cost**
+> line on the recipe itself (see §3) rather than looking for a packaging
+> option here — that's the mechanism that actually feeds into price.
 
 ---
 
@@ -60,6 +62,13 @@ the app works out the cost per gram/ml/piece automatically.
 | Cocoa powder | ₹320 | 500 g |
 | Red velvet colour + cocoa mix | ₹180 | 100 g |
 | Vanilla extract | ₹250 | 100 ml |
+
+Tick **Contains egg** on `Eggs` (and any other egg-based ingredient, e.g. an
+egg-wash glaze). Any recipe using it -- directly, or inherited from a
+parent -- automatically shows an **Egg** badge instead of **Eggless**, on
+the recipe page, the Recipes list, the Recipe Book, and the customer-facing
+Price Listing menu. No need to tag the recipe itself; it's derived from
+what's actually in it.
 
 ---
 
@@ -166,14 +175,12 @@ several menu items ("variants").
    Name: `Chocolate Cake — 0.5 Kg`
    Target yield: `0.5` kg (the scale panel converts this to a multiplier automatically)
    Serving size: `Serves 4-6`
-   Packaging: `0.5 Kg Cake Box`
    Pricing strategy: `Markup % (recipe's own Profit %)`
 
 2. Recipe: `Chocolate Cake`
    Name: `Chocolate Cake — 1 Kg`
    Target yield: `1` kg
    Serving size: `Serves 8-10`
-   Packaging: `1 Kg Cake Box`
    Pricing strategy: `Target food cost %` → `30`
 
 You now have **two independently priced products from one recipe** — the
@@ -242,9 +249,9 @@ without that data would just be a guess wearing a business-metric costume.
 
 On the Ingredients or Price Listing page, **Export all data** downloads one
 JSON file with everything — ingredients, recipes, menu items, settings,
-packaging templates, add-ons, and quotes. **Import all data** restores from
-that file (it replaces what's currently in your account, so it will ask you
-to confirm first).
+add-ons, and quotes. **Import all data** restores from that file (it
+replaces what's currently in your account, so it will ask you to confirm
+first).
 
 ---
 
@@ -259,7 +266,6 @@ to confirm first).
 | **Status** | Draft / Testing / Final — the current version's lifecycle stage |
 | **Menu item (variant)** | A specific sellable product built from a recipe: a size, a group combination, a price |
 | **Pricing strategy** | How a menu item's price is derived: Fixed, Markup %, Target Profit, or Target Food Cost % |
-| **Packaging template** | A reusable packaging option with its own cost, attachable to a menu item |
 | **Add-on** | An optional extra (cost + price) attachable to a quote |
 | **Quote** | A one-off, customer-specific price built from a recipe + optional menu item + add-ons |
 | **Wastage %** | Automatic buffer added to ingredient cost, global default or per-recipe override |

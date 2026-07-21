@@ -7,7 +7,6 @@ import type {
   CostBucket,
   ExtraCost,
   Ingredient,
-  PackagingTemplate,
   PriceListingVariant,
   PricingStrategy,
   Quote,
@@ -27,6 +26,7 @@ interface IngredientRow {
   purchase_quantity: number;
   purchase_unit: string;
   notes: string | null;
+  contains_egg: boolean | null;
   created_at: string;
   updated_at: string;
 }
@@ -87,7 +87,6 @@ interface PriceListingVariantRow {
   fixed_price: number | null;
   target_profit_amount: number | null;
   target_food_cost_percent: number | null;
-  packaging_template_id: string | null;
   serving_size: string | null;
   created_at: string;
   updated_at: string;
@@ -133,16 +132,6 @@ interface BusinessSettingsRow {
   updated_at: string;
 }
 
-interface PackagingTemplateRow {
-  id: string;
-  user_id: string;
-  name: string;
-  cost: number;
-  description: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
 function rowToIngredient(row: IngredientRow): Ingredient {
   return {
     id: row.id,
@@ -151,6 +140,7 @@ function rowToIngredient(row: IngredientRow): Ingredient {
     purchaseQuantity: row.purchase_quantity,
     purchaseUnit: row.purchase_unit as Unit,
     notes: row.notes ?? undefined,
+    containsEgg: row.contains_egg ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -165,6 +155,7 @@ function ingredientToRow(userId: string, ingredient: Ingredient): IngredientRow 
     purchase_quantity: ingredient.purchaseQuantity,
     purchase_unit: ingredient.purchaseUnit,
     notes: ingredient.notes ?? null,
+    contains_egg: ingredient.containsEgg ?? null,
     created_at: ingredient.createdAt,
     updated_at: ingredient.updatedAt,
   };
@@ -277,7 +268,6 @@ function rowToPriceListingVariant(row: PriceListingVariantRow): PriceListingVari
     fixedPrice: row.fixed_price ?? undefined,
     targetProfitAmount: row.target_profit_amount ?? undefined,
     targetFoodCostPercent: row.target_food_cost_percent ?? undefined,
-    packagingTemplateId: row.packaging_template_id ?? undefined,
     servingSize: row.serving_size ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -299,7 +289,6 @@ function priceListingVariantToRow(
     fixed_price: variant.fixedPrice ?? null,
     target_profit_amount: variant.targetProfitAmount ?? null,
     target_food_cost_percent: variant.targetFoodCostPercent ?? null,
-    packaging_template_id: variant.packagingTemplateId ?? null,
     serving_size: variant.servingSize ?? null,
     created_at: variant.createdAt,
     updated_at: variant.updatedAt,
@@ -395,39 +384,12 @@ function businessSettingsToRow(userId: string, settings: BusinessSettings): Busi
   };
 }
 
-function rowToPackagingTemplate(row: PackagingTemplateRow): PackagingTemplate {
-  return {
-    id: row.id,
-    name: row.name,
-    cost: row.cost,
-    description: row.description ?? undefined,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
-}
-
-function packagingTemplateToRow(
-  userId: string,
-  template: PackagingTemplate,
-): PackagingTemplateRow {
-  return {
-    id: template.id,
-    user_id: userId,
-    name: template.name,
-    cost: template.cost,
-    description: template.description ?? null,
-    created_at: template.createdAt,
-    updated_at: template.updatedAt,
-  };
-}
-
 export async function fetchAllData(userId: string): Promise<AppData> {
   const [
     ingredientsResult,
     recipesResult,
     priceListingVariantsResult,
     settingsResult,
-    packagingTemplatesResult,
     recipeVersionsResult,
     addOnsResult,
     quotesResult,
@@ -436,7 +398,6 @@ export async function fetchAllData(userId: string): Promise<AppData> {
     supabase.from('recipes').select('*').eq('user_id', userId),
     supabase.from('price_listing_variants').select('*').eq('user_id', userId),
     supabase.from('business_settings').select('*').eq('user_id', userId).maybeSingle(),
-    supabase.from('packaging_templates').select('*').eq('user_id', userId),
     supabase.from('recipe_versions').select('*').eq('user_id', userId),
     supabase.from('add_ons').select('*').eq('user_id', userId),
     supabase.from('quotes').select('*').eq('user_id', userId),
@@ -447,7 +408,6 @@ export async function fetchAllData(userId: string): Promise<AppData> {
   if (priceListingVariantsResult.error) throw priceListingVariantsResult.error;
   if (recipeVersionsResult.error) throw recipeVersionsResult.error;
   if (settingsResult.error) throw settingsResult.error;
-  if (packagingTemplatesResult.error) throw packagingTemplatesResult.error;
   if (addOnsResult.error) throw addOnsResult.error;
   if (quotesResult.error) throw quotesResult.error;
 
@@ -461,9 +421,6 @@ export async function fetchAllData(userId: string): Promise<AppData> {
     settings: settingsResult.data
       ? rowToBusinessSettings(settingsResult.data as BusinessSettingsRow)
       : DEFAULT_BUSINESS_SETTINGS,
-    packagingTemplates: (packagingTemplatesResult.data as PackagingTemplateRow[]).map(
-      rowToPackagingTemplate,
-    ),
     recipeVersions: (recipeVersionsResult.data as RecipeVersionRow[]).map(rowToRecipeVersion),
     addOns: (addOnsResult.data as AddOnRow[]).map(rowToAddOn),
     quotes: (quotesResult.data as QuoteRow[]).map(rowToQuote),
@@ -549,37 +506,6 @@ export async function upsertBusinessSettingsRow(
   if (error) throw error;
 }
 
-export async function insertPackagingTemplateRow(
-  userId: string,
-  template: PackagingTemplate,
-): Promise<void> {
-  const { error } = await supabase
-    .from('packaging_templates')
-    .insert(packagingTemplateToRow(userId, template));
-  if (error) throw error;
-}
-
-export async function updatePackagingTemplateRow(
-  userId: string,
-  template: PackagingTemplate,
-): Promise<void> {
-  const { error } = await supabase
-    .from('packaging_templates')
-    .update(packagingTemplateToRow(userId, template))
-    .eq('id', template.id)
-    .eq('user_id', userId);
-  if (error) throw error;
-}
-
-export async function deletePackagingTemplateRow(userId: string, id: string): Promise<void> {
-  const { error } = await supabase
-    .from('packaging_templates')
-    .delete()
-    .eq('id', id)
-    .eq('user_id', userId);
-  if (error) throw error;
-}
-
 export async function insertRecipeVersionRow(userId: string, version: RecipeVersion): Promise<void> {
   const { error } = await supabase
     .from('recipe_versions')
@@ -621,7 +547,6 @@ export async function replaceAllRows(userId: string, data: AppData): Promise<voi
     deleteIngredients,
     deleteRecipes,
     deletePriceListingVariants,
-    deletePackagingTemplates,
     deleteRecipeVersions,
     deleteAddOns,
     deleteQuotes,
@@ -629,7 +554,6 @@ export async function replaceAllRows(userId: string, data: AppData): Promise<voi
     supabase.from('ingredients').delete().eq('user_id', userId),
     supabase.from('recipes').delete().eq('user_id', userId),
     supabase.from('price_listing_variants').delete().eq('user_id', userId),
-    supabase.from('packaging_templates').delete().eq('user_id', userId),
     supabase.from('recipe_versions').delete().eq('user_id', userId),
     supabase.from('add_ons').delete().eq('user_id', userId),
     supabase.from('quotes').delete().eq('user_id', userId),
@@ -637,7 +561,6 @@ export async function replaceAllRows(userId: string, data: AppData): Promise<voi
   if (deleteIngredients.error) throw deleteIngredients.error;
   if (deleteRecipes.error) throw deleteRecipes.error;
   if (deletePriceListingVariants.error) throw deletePriceListingVariants.error;
-  if (deletePackagingTemplates.error) throw deletePackagingTemplates.error;
   if (deleteRecipeVersions.error) throw deleteRecipeVersions.error;
   if (deleteAddOns.error) throw deleteAddOns.error;
   if (deleteQuotes.error) throw deleteQuotes.error;
@@ -667,13 +590,6 @@ export async function replaceAllRows(userId: string, data: AppData): Promise<voi
         .eq('user_id', userId);
       if (error) throw error;
     }
-  }
-  // Packaging templates must exist before menu items (which may reference them) are inserted.
-  if (data.packagingTemplates.length > 0) {
-    const { error } = await supabase
-      .from('packaging_templates')
-      .insert(data.packagingTemplates.map((t) => packagingTemplateToRow(userId, t)));
-    if (error) throw error;
   }
   if (data.priceListingVariants.length > 0) {
     const { error } = await supabase

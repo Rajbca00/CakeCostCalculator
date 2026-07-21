@@ -2,9 +2,11 @@ import { Link } from 'react-router-dom';
 import type { Recipe } from '../../types';
 import { calculateRecipeCost } from '../../lib/costCalculations';
 import { getEffectiveRecipe } from '../../lib/recipeHierarchy';
+import { recipeContainsEgg } from '../../lib/eggFlag';
 import { formatCurrency } from '../../lib/format';
 import { useIngredientsById, useRecipesById, useSettings } from '../../state/useAppData';
 import { Button } from '../common/Button';
+import { EggFlagBadge } from './EggFlagBadge';
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -17,14 +19,8 @@ export function RecipeCard({ recipe, onRename, onClone, onDelete }: RecipeCardPr
   const ingredientsById = useIngredientsById();
   const recipesById = useRecipesById();
   const settings = useSettings();
-  const result = calculateRecipeCost(
-    getEffectiveRecipe(recipe, recipesById),
-    ingredientsById,
-    1,
-    undefined,
-    0,
-    settings,
-  );
+  const effectiveRecipe = getEffectiveRecipe(recipe, recipesById);
+  const result = calculateRecipeCost(effectiveRecipe, ingredientsById, 1, undefined, 0, settings);
   const parent = recipe.parentRecipeId ? recipesById.get(recipe.parentRecipeId) : undefined;
 
   return (
@@ -32,7 +28,8 @@ export function RecipeCard({ recipe, onRename, onClone, onDelete }: RecipeCardPr
       <div className="min-w-0">
         <Link to={`/recipes/${recipe.id}`} className="font-medium text-slate-900 hover:underline">
           {recipe.name}
-        </Link>
+        </Link>{' '}
+        <EggFlagBadge containsEgg={recipeContainsEgg(effectiveRecipe, ingredientsById)} />
         {(recipe.category || recipe.status || parent) && (
           <p className="text-xs text-slate-400">
             {recipe.category && <span>{recipe.category}</span>}

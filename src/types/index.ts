@@ -8,7 +8,6 @@ export * from './recipeVersion';
 export * from './pricingStrategy';
 export * from './priceListing';
 export * from './settings';
-export * from './packagingTemplate';
 export * from './addOn';
 export * from './quote';
 export * from './storage';

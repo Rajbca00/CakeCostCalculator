@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { AddOn, Ingredient, PackagingTemplate, Recipe } from '../types';
+import type { AddOn, Ingredient, Recipe } from '../types';
 import { useAppDataContext } from './AppDataContext';
 
 export function useIngredients(): Ingredient[] {
@@ -42,10 +42,6 @@ export function useSettings() {
   return useAppDataContext().settings;
 }
 
-export function usePackagingTemplates() {
-  return useAppDataContext().packagingTemplates;
-}
-
 export function useRecipeVersions(recipeId: string | undefined) {
   const versions = useAppDataContext().recipeVersions;
   return useMemo(
@@ -60,11 +56,6 @@ export function useRecipeVersions(recipeId: string | undefined) {
 export function useRecipesById(): Map<string, Recipe> {
   const recipes = useRecipes();
   return useMemo(() => new Map(recipes.map((r) => [r.id, r])), [recipes]);
-}
-
-export function usePackagingTemplatesById(): Map<string, PackagingTemplate> {
-  const templates = usePackagingTemplates();
-  return useMemo(() => new Map(templates.map((t) => [t.id, t])), [templates]);
 }
 
 export function useAddOns() {

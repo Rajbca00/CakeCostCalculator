@@ -4,7 +4,6 @@ import type { RecipeVersion } from './recipeVersion';
 import type { PriceListingVariant } from './priceListing';
 import type { BusinessSettings } from './settings';
 import { DEFAULT_BUSINESS_SETTINGS } from './settings';
-import type { PackagingTemplate } from './packagingTemplate';
 import type { AddOn } from './addOn';
 import type { Quote } from './quote';
 
@@ -15,7 +14,6 @@ export interface AppDataV1 {
   recipeVersions: RecipeVersion[];
   priceListingVariants: PriceListingVariant[];
   settings: BusinessSettings;
-  packagingTemplates: PackagingTemplate[];
   addOns: AddOn[];
   quotes: Quote[];
 }
@@ -32,7 +30,6 @@ export function createEmptyAppData(): AppData {
     recipeVersions: [],
     priceListingVariants: [],
     settings: DEFAULT_BUSINESS_SETTINGS,
-    packagingTemplates: [],
     addOns: [],
     quotes: [],
   };

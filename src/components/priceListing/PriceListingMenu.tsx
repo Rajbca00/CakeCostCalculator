@@ -2,8 +2,10 @@ import { RECIPE_CATEGORIES, type Ingredient, type PriceListingVariant, type Reci
 import { calculateVariantCost, calculateVariantSellingPrice } from '../../lib/priceListing';
 import { getGroupNames } from '../../lib/recipeGroups';
 import { getEffectiveRecipe } from '../../lib/recipeHierarchy';
+import { recipeContainsEgg } from '../../lib/eggFlag';
 import { formatCurrency, formatQuantity } from '../../lib/format';
 import { useSettings } from '../../state/useAppData';
+import { EggFlagBadge } from '../recipes/EggFlagBadge';
 
 interface PriceListingMenuProps {
   variants: PriceListingVariant[];
@@ -69,12 +71,16 @@ export function PriceListingMenu({
                 settings,
               );
               const price = calculateVariantSellingPrice(variant, result);
-              const allGroups = getGroupNames(getEffectiveRecipe(recipe, recipesById));
+              const effectiveRecipe = getEffectiveRecipe(recipe, recipesById);
+              const allGroups = getGroupNames(effectiveRecipe);
               const isPartial = variant.groupNames.length < allGroups.length;
               return (
                 <div key={variant.id} className="flex items-start justify-between gap-4 py-3">
                   <div className="min-w-0">
-                    <p className="font-medium text-slate-900">{variant.name}</p>
+                    <p className="font-medium text-slate-900">
+                      {variant.name}{' '}
+                      <EggFlagBadge containsEgg={recipeContainsEgg(effectiveRecipe, ingredientsById)} />
+                    </p>
                     <p className="text-xs text-slate-500">
                       {variant.servingSize ?? (
                         <>

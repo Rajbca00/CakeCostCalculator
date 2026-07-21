@@ -6,12 +6,10 @@ import { Button } from '../components/common/Button';
 import { NumberInput } from '../components/common/NumberInput';
 import { MoneyInput } from '../components/common/MoneyInput';
 import { TextInput } from '../components/common/TextInput';
-import { PackagingTemplateFormModal } from '../components/settings/PackagingTemplateFormModal';
-import { PackagingTemplateTable } from '../components/settings/PackagingTemplateTable';
 import { AddOnFormModal } from '../components/settings/AddOnFormModal';
 import { AddOnTable } from '../components/settings/AddOnTable';
-import { useAddOns, useAppDataContext, usePackagingTemplates, useSettings } from '../state/useAppData';
-import type { AddOn, BusinessSettings, PackagingTemplate } from '../types';
+import { useAddOns, useAppDataContext, useSettings } from '../state/useAppData';
+import type { AddOn, BusinessSettings } from '../types';
 import { isNonNegativeNumber } from '../lib/validation';
 
 function clampPercent(value: number): number {
@@ -21,17 +19,8 @@ function clampPercent(value: number): number {
 
 export function SettingsPage() {
   const settings = useSettings();
-  const packagingTemplates = usePackagingTemplates();
   const addOns = useAddOns();
-  const {
-    updateSettings,
-    addPackagingTemplate,
-    updatePackagingTemplate,
-    deletePackagingTemplate,
-    addAddOn,
-    updateAddOn,
-    deleteAddOn,
-  } = useAppDataContext();
+  const { updateSettings, addAddOn, updateAddOn, deleteAddOn } = useAppDataContext();
 
   const [form, setForm] = useState<BusinessSettings>(settings);
   const [saving, setSaving] = useState(false);
@@ -40,11 +29,6 @@ export function SettingsPage() {
   useEffect(() => {
     setForm(settings);
   }, [settings]);
-
-  const [templateModalOpen, setTemplateModalOpen] = useState(false);
-  const [editingTemplate, setEditingTemplate] = useState<PackagingTemplate | undefined>(undefined);
-  const [pendingDelete, setPendingDelete] = useState<PackagingTemplate | undefined>(undefined);
-  const [deleting, setDeleting] = useState(false);
 
   const [addOnModalOpen, setAddOnModalOpen] = useState(false);
   const [editingAddOn, setEditingAddOn] = useState<AddOn | undefined>(undefined);
@@ -73,37 +57,6 @@ export function SettingsPage() {
       // failure toast already shown by the context
     } finally {
       setSaving(false);
-    }
-  }
-
-  function openAddTemplate() {
-    setEditingTemplate(undefined);
-    setTemplateModalOpen(true);
-  }
-
-  function openEditTemplate(template: PackagingTemplate) {
-    setEditingTemplate(template);
-    setTemplateModalOpen(true);
-  }
-
-  async function handleSaveTemplate(template: PackagingTemplate) {
-    if (editingTemplate) {
-      await updatePackagingTemplate(template);
-    } else {
-      await addPackagingTemplate(template);
-    }
-  }
-
-  async function handleConfirmDeleteTemplate() {
-    if (!pendingDelete) return;
-    setDeleting(true);
-    try {
-      await deletePackagingTemplate(pendingDelete.id);
-      setPendingDelete(undefined);
-    } catch {
-      // failure toast already shown; keep dialog open so the user can retry
-    } finally {
-      setDeleting(false);
     }
   }
 
@@ -222,48 +175,6 @@ export function SettingsPage() {
           </Button>
         </div>
       </div>
-
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-semibold text-slate-800">Packaging templates</h2>
-          <p className="text-sm text-slate-500">
-            Reusable packaging options (name, cost, description) for use in product variants.
-          </p>
-        </div>
-        <Button onClick={openAddTemplate}>Add packaging template</Button>
-      </div>
-
-      {packagingTemplates.length === 0 ? (
-        <EmptyState
-          title="No packaging templates yet"
-          description='e.g. "Box of 6", "1 Kg Cake" -- each with its own cost.'
-          action={<Button onClick={openAddTemplate}>Add your first template</Button>}
-        />
-      ) : (
-        <PackagingTemplateTable
-          templates={packagingTemplates}
-          onEdit={openEditTemplate}
-          onDelete={setPendingDelete}
-        />
-      )}
-
-      <PackagingTemplateFormModal
-        open={templateModalOpen}
-        template={editingTemplate}
-        onClose={() => setTemplateModalOpen(false)}
-        onSave={handleSaveTemplate}
-      />
-
-      <ConfirmDialog
-        open={!!pendingDelete}
-        title={`Delete "${pendingDelete?.name}"?`}
-        description="This cannot be undone."
-        confirmLabel="Delete"
-        danger
-        confirming={deleting}
-        onConfirm={handleConfirmDeleteTemplate}
-        onCancel={() => setPendingDelete(undefined)}
-      />
 
       <div className="mb-4 mt-8 flex flex-wrap items-center justify-between gap-3">
         <div>
