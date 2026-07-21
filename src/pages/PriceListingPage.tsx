@@ -10,7 +10,6 @@ import { PriceListingMenu } from '../components/priceListing/PriceListingMenu';
 import {
   useAppDataContext,
   useIngredientsById,
-  usePackagingTemplates,
   usePriceListingVariants,
   useRecipes,
   useSettings,
@@ -27,7 +26,6 @@ export function PriceListingPage() {
   const recipes = useRecipes();
   const ingredientsById = useIngredientsById();
   const variants = usePriceListingVariants();
-  const packagingTemplates = usePackagingTemplates();
   const settings = useSettings();
   const { addPriceListingVariant, updatePriceListingVariant, deletePriceListingVariant } =
     useAppDataContext();
@@ -87,7 +85,6 @@ export function PriceListingPage() {
           groupNames: input.groupNames,
           multiplier: input.multiplier,
           servingSize: input.servingSize,
-          packagingTemplateId: input.packagingTemplateId,
           pricingStrategy: input.pricingStrategy,
           fixedPrice: input.fixedPrice,
           targetProfitAmount: input.targetProfitAmount,
@@ -103,7 +100,6 @@ export function PriceListingPage() {
           groupNames: input.groupNames,
           multiplier: input.multiplier,
           servingSize: input.servingSize,
-          packagingTemplateId: input.packagingTemplateId,
           pricingStrategy: input.pricingStrategy,
           fixedPrice: input.fixedPrice,
           targetProfitAmount: input.targetProfitAmount,
@@ -260,7 +256,6 @@ export function PriceListingPage() {
       <VariantDialog
         open={dialogOpen}
         recipes={recipes}
-        packagingTemplates={packagingTemplates}
         editingVariant={editingVariant}
         confirming={saving}
         onClose={() => setDialogOpen(false)}

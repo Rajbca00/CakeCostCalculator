@@ -5,7 +5,6 @@ import {
   type BusinessSettings,
   createEmptyAppData,
   type Ingredient,
-  type PackagingTemplate,
   type PriceListingVariant,
   type Quote,
   type Recipe,
@@ -17,14 +16,12 @@ import { useToast } from '../components/layout/Toast';
 import {
   deleteAddOnRow,
   deleteIngredientRow,
-  deletePackagingTemplateRow,
   deletePriceListingVariantRow,
   deleteQuoteRow,
   deleteRecipeRow,
   fetchAllData,
   insertAddOnRow,
   insertIngredientRow,
-  insertPackagingTemplateRow,
   insertPriceListingVariantRow,
   insertQuoteRow,
   insertRecipeRow,
@@ -32,7 +29,6 @@ import {
   replaceAllRows,
   updateAddOnRow,
   updateIngredientRow,
-  updatePackagingTemplateRow,
   updatePriceListingVariantRow,
   updateRecipeRow,
   upsertBusinessSettingsRow,
@@ -43,7 +39,6 @@ interface AppDataContextValue {
   recipes: Recipe[];
   priceListingVariants: PriceListingVariant[];
   settings: BusinessSettings;
-  packagingTemplates: PackagingTemplate[];
   recipeVersions: RecipeVersion[];
   addOns: AddOn[];
   quotes: Quote[];
@@ -58,9 +53,6 @@ interface AppDataContextValue {
   updatePriceListingVariant: (variant: PriceListingVariant) => Promise<void>;
   deletePriceListingVariant: (id: string) => Promise<void>;
   updateSettings: (settings: BusinessSettings) => Promise<void>;
-  addPackagingTemplate: (template: PackagingTemplate) => Promise<void>;
-  updatePackagingTemplate: (template: PackagingTemplate) => Promise<void>;
-  deletePackagingTemplate: (id: string) => Promise<void>;
   addRecipeVersion: (version: RecipeVersion) => Promise<void>;
   addAddOn: (addOn: AddOn) => Promise<void>;
   updateAddOn: (addOn: AddOn) => Promise<void>;
@@ -244,46 +236,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function addPackagingTemplate(template: PackagingTemplate): Promise<void> {
-    dispatch({ type: 'ADD_PACKAGING_TEMPLATE', template });
-    if (!user) return;
-    try {
-      await insertPackagingTemplateRow(user.id, template);
-      showToast(`"${template.name}" added`, 'success');
-    } catch {
-      showToast('Could not save the packaging template. Refreshing…', 'error');
-      await resync();
-      throw new Error('Failed to save packaging template');
-    }
-  }
-
-  async function updatePackagingTemplate(template: PackagingTemplate): Promise<void> {
-    dispatch({ type: 'UPDATE_PACKAGING_TEMPLATE', template });
-    if (!user) return;
-    try {
-      await updatePackagingTemplateRow(user.id, template);
-      showToast(`"${template.name}" updated`, 'success');
-    } catch {
-      showToast('Could not save the change. Refreshing…', 'error');
-      await resync();
-      throw new Error('Failed to update packaging template');
-    }
-  }
-
-  async function deletePackagingTemplate(id: string): Promise<void> {
-    const name = state.packagingTemplates.find((t) => t.id === id)?.name ?? 'Packaging template';
-    dispatch({ type: 'DELETE_PACKAGING_TEMPLATE', id });
-    if (!user) return;
-    try {
-      await deletePackagingTemplateRow(user.id, id);
-      showToast(`"${name}" deleted`, 'success');
-    } catch {
-      showToast('Could not delete the packaging template. Refreshing…', 'error');
-      await resync();
-      throw new Error('Failed to delete packaging template');
-    }
-  }
-
   async function addRecipeVersion(version: RecipeVersion): Promise<void> {
     dispatch({ type: 'ADD_RECIPE_VERSION', version });
     if (!user) return;
@@ -373,7 +325,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     recipes: state.recipes,
     priceListingVariants: state.priceListingVariants,
     settings: state.settings,
-    packagingTemplates: state.packagingTemplates,
     recipeVersions: state.recipeVersions,
     addOns: state.addOns,
     quotes: state.quotes,
@@ -388,9 +339,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     updatePriceListingVariant,
     deletePriceListingVariant,
     updateSettings,
-    addPackagingTemplate,
-    updatePackagingTemplate,
-    deletePackagingTemplate,
     addRecipeVersion,
     addAddOn,
     updateAddOn,

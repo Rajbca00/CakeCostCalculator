@@ -14,7 +14,6 @@ import { isNonEmptyString, isPositiveNumber } from '../../lib/validation';
 import {
   PRICING_STRATEGIES,
   PRICING_STRATEGY_LABELS,
-  type PackagingTemplate,
   type PriceListingVariant,
   type PricingStrategy,
   type Recipe,
@@ -26,7 +25,6 @@ export interface VariantDialogInput {
   groupNames: string[];
   multiplier: number;
   servingSize?: string;
-  packagingTemplateId?: string;
   pricingStrategy?: PricingStrategy;
   fixedPrice?: number;
   targetProfitAmount?: number;
@@ -36,7 +34,6 @@ export interface VariantDialogInput {
 interface VariantDialogProps {
   open: boolean;
   recipes: Recipe[];
-  packagingTemplates: PackagingTemplate[];
   editingVariant?: PriceListingVariant;
   confirming?: boolean;
   onClose: () => void;
@@ -46,7 +43,6 @@ interface VariantDialogProps {
 export function VariantDialog({
   open,
   recipes,
-  packagingTemplates,
   editingVariant,
   confirming = false,
   onClose,
@@ -58,7 +54,6 @@ export function VariantDialog({
   const [name, setName] = useState('');
   const [nameEdited, setNameEdited] = useState(false);
   const [servingSize, setServingSize] = useState('');
-  const [packagingTemplateId, setPackagingTemplateId] = useState('');
   const [pricingStrategy, setPricingStrategy] = useState<PricingStrategy>('markup');
   const [fixedPrice, setFixedPrice] = useState(NaN);
   const [targetProfitAmount, setTargetProfitAmount] = useState(NaN);
@@ -74,7 +69,6 @@ export function VariantDialog({
       setName(editingVariant.name);
       setNameEdited(true);
       setServingSize(editingVariant.servingSize ?? '');
-      setPackagingTemplateId(editingVariant.packagingTemplateId ?? '');
       setPricingStrategy(editingVariant.pricingStrategy ?? 'markup');
       setFixedPrice(editingVariant.fixedPrice ?? NaN);
       setTargetProfitAmount(editingVariant.targetProfitAmount ?? NaN);
@@ -84,7 +78,6 @@ export function VariantDialog({
       setMultiplier(1);
       setNameEdited(false);
       setServingSize('');
-      setPackagingTemplateId('');
       setPricingStrategy('markup');
       setFixedPrice(NaN);
       setTargetProfitAmount(NaN);
@@ -146,7 +139,6 @@ export function VariantDialog({
       groupNames: groupNames.filter((g) => selectedGroups.has(g)),
       multiplier,
       servingSize: servingSize.trim() || undefined,
-      packagingTemplateId: packagingTemplateId || undefined,
       pricingStrategy,
       fixedPrice: Number.isFinite(fixedPrice) ? fixedPrice : undefined,
       targetProfitAmount: Number.isFinite(targetProfitAmount) ? targetProfitAmount : undefined,
@@ -220,19 +212,6 @@ export function VariantDialog({
           onChange={(e) => setServingSize(e.target.value)}
           placeholder='e.g. "Serves 8-10"'
         />
-
-        <Select
-          label="Packaging (optional)"
-          value={packagingTemplateId}
-          onChange={(e) => setPackagingTemplateId(e.target.value)}
-        >
-          <option value="">No packaging template</option>
-          {packagingTemplates.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </Select>
 
         <Select
           label="Pricing strategy"

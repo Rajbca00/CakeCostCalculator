@@ -3,7 +3,6 @@ import {
   type AppData,
   type BusinessSettings,
   type Ingredient,
-  type PackagingTemplate,
   type PriceListingVariant,
   type Quote,
   type Recipe,
@@ -22,9 +21,6 @@ export type AppDataAction =
   | { type: 'UPDATE_PRICE_LISTING_VARIANT'; variant: PriceListingVariant }
   | { type: 'DELETE_PRICE_LISTING_VARIANT'; id: string }
   | { type: 'SET_SETTINGS'; settings: BusinessSettings }
-  | { type: 'ADD_PACKAGING_TEMPLATE'; template: PackagingTemplate }
-  | { type: 'UPDATE_PACKAGING_TEMPLATE'; template: PackagingTemplate }
-  | { type: 'DELETE_PACKAGING_TEMPLATE'; id: string }
   | { type: 'ADD_RECIPE_VERSION'; version: RecipeVersion }
   | { type: 'ADD_ADD_ON'; addOn: AddOn }
   | { type: 'UPDATE_ADD_ON'; addOn: AddOn }
@@ -88,23 +84,6 @@ export function appDataReducer(state: AppData, action: AppDataAction): AppData {
       };
     case 'SET_SETTINGS':
       return { ...state, settings: action.settings };
-    case 'ADD_PACKAGING_TEMPLATE':
-      return { ...state, packagingTemplates: [...state.packagingTemplates, action.template] };
-    case 'UPDATE_PACKAGING_TEMPLATE':
-      return {
-        ...state,
-        packagingTemplates: state.packagingTemplates.map((t) =>
-          t.id === action.template.id ? action.template : t,
-        ),
-      };
-    case 'DELETE_PACKAGING_TEMPLATE':
-      return {
-        ...state,
-        packagingTemplates: state.packagingTemplates.filter((t) => t.id !== action.id),
-        priceListingVariants: state.priceListingVariants.map((v) =>
-          v.packagingTemplateId === action.id ? { ...v, packagingTemplateId: undefined } : v,
-        ),
-      };
     case 'ADD_RECIPE_VERSION':
       return { ...state, recipeVersions: [...state.recipeVersions, action.version] };
     case 'ADD_ADD_ON':

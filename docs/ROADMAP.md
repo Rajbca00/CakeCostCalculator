@@ -2,9 +2,9 @@
 
 Tracks the multi-phase build-out from "cost calculator" to full bakery
 management (recipe hierarchy, versioning, categories, detailed costing,
-settings, packaging templates, pricing strategies, customer menus, quotes,
-and a business dashboard). Each phase ships as its own PR against `main`
-so nothing lands as one giant, unreviewable change.
+settings, pricing strategies, customer menus, quotes, and a business
+dashboard). Each phase ships as its own PR against `main` so nothing lands
+as one giant, unreviewable change.
 
 **Ground rules for every phase:**
 - Additive migrations only — never drop or rewrite existing `ingredients`,
@@ -73,6 +73,24 @@ These were confirmed with the bakery owner before implementation started:
    `bakeTimeMinutes` was already treated as fixed regardless of multiplier.
    `activeTimeMinutes` is now likewise always fixed, never scaled by
    multiplier, for consistency with bake time.
+6. **Packaging Templates removed**: Phase 1 shipped reusable packaging
+   options (name, cost, description) on the Settings page, attachable to a
+   menu item via `PriceListingVariant.packagingTemplateId`. Investigating a
+   "does packaging cost affect the sale price" question surfaced that the
+   template's `cost` was never actually read by `calculateVariantCost`,
+   `calculateVariantSellingPrice`, or the Quote Builder — picking a template
+   on a menu item was purely cosmetic and never affected price. Rather than
+   wire it up, the owner asked to remove the feature entirely, since a flat
+   Extra cost line on the recipe already covers a fixed packaging cost (e.g.
+   ₹30) and flows into price correctly today. Removed: the
+   `PackagingTemplate` type, its Settings CRUD UI, `packagingTemplateId` on
+   `PriceListingVariant`, and its reducer/context/hooks/zod/Supabase
+   plumbing. The `packaging_templates` table and
+   `price_listing_variants.packaging_template_id` column are left in place
+   in any Supabase project that already ran the old schema (dropping them is
+   destructive to any data in that table), with a commented-out manual
+   cleanup snippet at the bottom of `supabase/schema.sql` for anyone who
+   wants to drop them.
 
 ## Open assumption to confirm before Phase 1 costing work lands
 
@@ -105,15 +123,18 @@ Schema + Settings, mostly invisible to existing recipes until they opt in.
   see locked decision #4 above -- these are now folded into `total` and
   every price/profit figure derived from it.
 - Labour cost = hourly rate × active time (`Recipe.activeTimeMinutes`, new
-  optional field, scales with batch multiplier).
+  optional field; see locked decision #5 -- not scaled by the batch
+  multiplier).
 - Electricity cost = oven power × electricity rate × bake time
   (`Recipe.bakeTimeMinutes` + optional `Recipe.ovenPowerWatts` override).
 - Wastage %: global default (3%, visible as its own line item, not folded
   invisibly into cost), overridable per recipe via
   `Recipe.wastagePercentOverride`.
 - Packaging Templates: CRUD (name, cost, description) on the Settings page,
-  not yet linked to a recipe/variant — that wiring is Phase 3's Product
-  Variants work.
+  attachable to a menu item via `packagingTemplateId`. **Removed later** --
+  see "Packaging Templates removed" below; a template's cost was never
+  actually wired into any price calculation, so the feature was dropped
+  rather than fixed.
 - Recipe Categories (Cakes/Cupcakes/Brownies/Cookies/Frostings/Fillings/
   Ganache/Decorations): field on Recipe + edit-form dropdown. Not yet used
   for filtering/grouping on the Recipes page — that's Phase 4 UI work.
