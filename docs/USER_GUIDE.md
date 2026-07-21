@@ -63,12 +63,13 @@ the app works out the cost per gram/ml/piece automatically.
 | Red velvet colour + cocoa mix | ₹180 | 100 g |
 | Vanilla extract | ₹250 | 100 ml |
 
-Tick **Contains egg** on `Eggs` (and any other egg-based ingredient, e.g. an
-egg-wash glaze). Any recipe using it -- directly, or inherited from a
-parent -- automatically shows an **Egg** badge instead of **Eggless**, on
-the recipe page, the Recipes list, the Recipe Book, and the customer-facing
-Price Listing menu. No need to tag the recipe itself; it's derived from
-what's actually in it.
+Any recipe that uses an ingredient named with the word "egg"/"eggs" (like
+`Eggs` above) -- directly, or inherited from a parent -- automatically
+shows an **Egg** badge instead of **Eggless**, on the recipe page, the
+Recipes list, the Recipe Book, and the customer-facing Price Listing menu.
+Nothing to tick -- it's detected from the ingredient's name, so name any
+egg ingredient with the word "egg" (e.g. "Eggs", "Egg Whites") for it to be
+picked up.
 
 ---
 

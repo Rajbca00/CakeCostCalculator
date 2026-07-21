@@ -91,17 +91,18 @@ These were confirmed with the bakery owner before implementation started:
    destructive to any data in that table), with a commented-out manual
    cleanup snippet at the bottom of `supabase/schema.sql` for anyone who
    wants to drop them.
-7. **Egg/Eggless flag, derived from an explicit per-ingredient flag, not
-   name guessing**: `Ingredient.containsEgg` (boolean, settable in the
-   ingredient form) marks whether an ingredient itself contains egg. A
-   recipe's Egg/Eggless badge is computed live from whether any of its
-   ingredient lines (including inherited ones, via the effective/parent-
-   merged recipe) reference an ingredient with `containsEgg` true --
-   consistent with the group-bucket precedent (locked decision on
-   `groupBuckets`) of using an explicit flag rather than guessing from the
-   ingredient name, since "Egg Replacer" or "Eggplant" would false-positive
-   on a naive `name.includes('egg')` check. Shown on the Recipe Detail page
-   header, Recipe list cards, Recipe Book rows, and the customer-facing
+7. **Egg/Eggless flag, derived from ingredient name (revised)**: first tried
+   as an explicit `Ingredient.containsEgg` checkbox (to avoid name-guessing
+   false positives like "Eggplant"), but the owner asked instead for it to
+   be detected automatically from whether "egg"/"eggs" is one of the
+   ingredients used -- no per-ingredient setup step. `lib/eggFlag.ts` now
+   matches an ingredient's name against `\begg(s)?\b` (whole-word, case-
+   insensitive) -- catches "Eggs", "Farm Eggs"; excludes "Eggplant" and
+   "Eggless" since the word boundary doesn't land after "egg" inside those
+   words. A recipe's badge is true if any of its ingredient lines --
+   including ones inherited from a parent recipe, via the effective/parent-
+   merged recipe -- use a matching ingredient. Shown on the Recipe Detail
+   page header, Recipe list cards, Recipe Book rows, and the customer-facing
    Price Listing menu.
 
 ## Open assumption to confirm before Phase 1 costing work lands

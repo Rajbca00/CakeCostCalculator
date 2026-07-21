@@ -22,7 +22,6 @@ interface FormState {
   purchaseQuantity: number;
   purchaseUnit: Unit;
   notes: string;
-  containsEgg: boolean;
 }
 
 function initialFormState(ingredient?: Ingredient): FormState {
@@ -32,7 +31,6 @@ function initialFormState(ingredient?: Ingredient): FormState {
     purchaseQuantity: ingredient?.purchaseQuantity ?? NaN,
     purchaseUnit: ingredient?.purchaseUnit ?? 'g',
     notes: ingredient?.notes ?? '',
-    containsEgg: ingredient?.containsEgg ?? false,
   };
 }
 
@@ -76,7 +74,6 @@ export function IngredientFormModal({
       purchaseQuantity: form.purchaseQuantity,
       purchaseUnit: form.purchaseUnit,
       notes: form.notes.trim() || undefined,
-      containsEgg: form.containsEgg,
       createdAt: ingredient?.createdAt ?? now,
       updatedAt: now,
     };
@@ -129,14 +126,6 @@ export function IngredientFormModal({
           value={form.notes}
           onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
         />
-        <label className="flex items-center gap-1.5 text-sm text-slate-600">
-          <input
-            type="checkbox"
-            checked={form.containsEgg}
-            onChange={(e) => setForm((f) => ({ ...f, containsEgg: e.target.checked }))}
-          />
-          Contains egg
-        </label>
         <div className="mt-2 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={handleClose} disabled={saving}>
             Cancel
