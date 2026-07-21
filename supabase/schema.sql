@@ -49,6 +49,10 @@ alter table recipes add column if not exists wastage_percent_override numeric;
 alter table recipes add column if not exists parent_recipe_id uuid references recipes(id) on delete set null;
 alter table recipes add column if not exists status text;
 
+-- Cost-accounting redesign: which dashboard bucket each group name rolls into,
+-- assigned once per group name instead of per ingredient/extra-cost line.
+alter table recipes add column if not exists group_buckets jsonb;
+
 create table if not exists price_listing_variants (
   id uuid primary key,
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -145,6 +149,7 @@ create table if not exists recipe_versions (
   bake_time_minutes numeric,
   oven_power_watts numeric,
   wastage_percent_override numeric,
+  group_buckets jsonb,
   created_at timestamptz not null
 );
 

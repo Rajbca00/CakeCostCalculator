@@ -1,4 +1,4 @@
-import type { ExtraCost, Recipe, RecipeIngredientLine } from '../types';
+import type { CostBucket, ExtraCost, Recipe, RecipeIngredientLine } from '../types';
 
 /** Guards against pathological chains; real cycles are prevented separately via seen-set checks. */
 const MAX_CHAIN_DEPTH = 25;
@@ -24,7 +24,9 @@ export function getParentChain(recipe: Recipe, recipesById: Map<string, Recipe>)
  * automatically reflects the whole inheritance chain -- editing an ancestor is instantly
  * reflected here since nothing is duplicated/stored, just recomputed on read. Every other
  * field (yield, profit %, notes, labour/electricity/wastage settings, etc.) comes from
- * `recipe` itself; only ingredientLines/extraCosts are inherited.
+ * `recipe` itself; only ingredientLines/extraCosts are inherited. groupBuckets is also merged
+ * (root-first, so a descendant's own assignment for a group name wins) so a child recipe
+ * doesn't need to re-assign a bucket its parent already set for an inherited group.
  */
 export function getEffectiveRecipe(recipe: Recipe, recipesById: Map<string, Recipe>): Recipe {
   const ancestors = getParentChain(recipe, recipesById);
@@ -35,8 +37,12 @@ export function getEffectiveRecipe(recipe: Recipe, recipesById: Map<string, Reci
     ...recipe.ingredientLines,
   ];
   const extraCosts: ExtraCost[] = [...ancestors.flatMap((a) => a.extraCosts), ...recipe.extraCosts];
+  const groupBuckets: Record<string, CostBucket> = [...ancestors, recipe].reduce(
+    (acc, r) => ({ ...acc, ...r.groupBuckets }),
+    {} as Record<string, CostBucket>,
+  );
 
-  return { ...recipe, ingredientLines, extraCosts };
+  return { ...recipe, ingredientLines, extraCosts, groupBuckets };
 }
 
 export function getDirectChildren(recipeId: string, recipes: Recipe[]): Recipe[] {

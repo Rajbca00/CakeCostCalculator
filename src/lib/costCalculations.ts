@@ -1,12 +1,10 @@
 import { getUnitCategory, toBaseUnit } from './units';
 import { normalizeGroupName } from './recipeGroups';
-import { bucketForCategory, resolveExtraCostCategory, resolveIngredientLineCategory } from './costCategory';
+import { resolveExtraCostBucket, resolveIngredientLineBucket } from './groupBucket';
 import {
   COST_BUCKETS,
-  COST_CATEGORIES,
   type BusinessSettings,
   type CostBucket,
-  type CostCategory,
   type Ingredient,
   type Recipe,
   type RecipeIngredientLine,
@@ -40,7 +38,7 @@ export interface RecipeCostLineResult {
   cost: number;
   missingIngredient: boolean;
   groupName: string;
-  category: CostCategory;
+  bucket: CostBucket;
 }
 
 export interface RecipeCostExtraResult {
@@ -48,7 +46,7 @@ export interface RecipeCostExtraResult {
   label: string;
   amount: number;
   groupName: string;
-  category: CostCategory;
+  bucket: CostBucket;
 }
 
 export interface RecipeCostResult {
@@ -72,9 +70,7 @@ export interface RecipeCostResult {
   finalPrice: number;
 
   // --- Cost-breakdown dashboard fields (additive; never affect the pricing fields above) ---
-  /** Sum of all ingredient-line/extra-cost amounts per fixed cost category. */
-  categoryTotals: Record<CostCategory, number>;
-  /** categoryTotals rolled up into the four dashboard buckets. */
+  /** Sum of all ingredient-line/extra-cost amounts per dashboard bucket, per each group's Recipe.groupBuckets assignment. */
   bucketTotals: Record<CostBucket, number>;
   /** Wastage % actually applied (recipe override, else global settings, else 0). */
   wastagePercent: number;
@@ -116,7 +112,7 @@ export function calculateRecipeCost(
         cost,
         missingIngredient: !ingredient || categoryMismatch,
         groupName: normalizeGroupName(line.groupName),
-        category: resolveIngredientLineCategory(line),
+        bucket: resolveIngredientLineBucket(line, recipe),
       };
     });
 
@@ -127,7 +123,7 @@ export function calculateRecipeCost(
       label: e.label,
       amount: e.scalesWithYield ? e.amount * multiplier : e.amount,
       groupName: normalizeGroupName(e.groupName),
-      category: resolveExtraCostCategory(e),
+      bucket: resolveExtraCostBucket(e, recipe),
     }));
 
   // Round subtotals to the cent before combining them, and derive every
@@ -148,16 +144,6 @@ export function calculateRecipeCost(
   const safeDiscountPercent = Math.min(100, Math.max(0, discountPercent || 0));
   const finalPrice = round2(sellingTotal * (1 - safeDiscountPercent / 100));
 
-  const categoryTotals = Object.fromEntries(
-    COST_CATEGORIES.map((category) => [
-      category,
-      round2(
-        lines.filter((l) => l.category === category).reduce((sum, l) => sum + l.cost, 0) +
-          extraCosts.filter((e) => e.category === category).reduce((sum, e) => sum + e.amount, 0),
-      ),
-    ]),
-  ) as Record<CostCategory, number>;
-
   const wastagePercent = Math.max(
     0,
     recipe.wastagePercentOverride ?? settings?.wastagePercent ?? 0,
@@ -174,17 +160,18 @@ export function calculateRecipeCost(
     : 0;
 
   // Bucket totals fold in the automatic labour/electricity amounts (on top of any
-  // manually-tagged Labour/Overheads lines) so the breakdown adds up to actualCost below.
+  // lines/extra costs whose group resolves to Labour/Overheads) so the breakdown
+  // adds up to actualCost below.
   const bucketTotals = Object.fromEntries(
     COST_BUCKETS.map((bucket) => {
-      const fromCategories = round2(
-        COST_CATEGORIES.filter((category) => bucketForCategory(category) === bucket).reduce(
-          (sum, category) => sum + categoryTotals[category],
-          0,
-        ),
-      );
+      const fromLines = lines
+        .filter((l) => l.bucket === bucket)
+        .reduce((sum, l) => sum + l.cost, 0);
+      const fromExtras = extraCosts
+        .filter((e) => e.bucket === bucket)
+        .reduce((sum, e) => sum + e.amount, 0);
       const automatic = bucket === 'labour' ? laborAmount : bucket === 'overheads' ? electricityAmount : 0;
-      return [bucket, round2(fromCategories + automatic)];
+      return [bucket, round2(fromLines + fromExtras + automatic)];
     }),
   ) as Record<CostBucket, number>;
 
@@ -204,7 +191,6 @@ export function calculateRecipeCost(
     discountPercent: safeDiscountPercent,
     discountAmount: round2(sellingTotal - finalPrice),
     finalPrice,
-    categoryTotals,
     bucketTotals,
     wastagePercent,
     wastageAmount,

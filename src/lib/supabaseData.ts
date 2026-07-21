@@ -4,6 +4,7 @@ import type {
   AddOn,
   AppData,
   BusinessSettings,
+  CostBucket,
   ExtraCost,
   Ingredient,
   PackagingTemplate,
@@ -47,6 +48,7 @@ interface RecipeRow {
   wastage_percent_override: number | null;
   parent_recipe_id: string | null;
   status: string | null;
+  group_buckets: Record<string, CostBucket> | null;
   created_at: string;
   updated_at: string;
 }
@@ -70,6 +72,7 @@ interface RecipeVersionRow {
   bake_time_minutes: number | null;
   oven_power_watts: number | null;
   wastage_percent_override: number | null;
+  group_buckets: Record<string, CostBucket> | null;
   created_at: string;
 }
 
@@ -184,6 +187,7 @@ function rowToRecipe(row: RecipeRow): Recipe {
     wastagePercentOverride: row.wastage_percent_override ?? undefined,
     parentRecipeId: row.parent_recipe_id ?? undefined,
     status: (row.status as RecipeStatus | null) ?? undefined,
+    groupBuckets: row.group_buckets ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -207,6 +211,7 @@ function recipeToRow(userId: string, recipe: Recipe): RecipeRow {
     wastage_percent_override: recipe.wastagePercentOverride ?? null,
     parent_recipe_id: recipe.parentRecipeId ?? null,
     status: recipe.status ?? null,
+    group_buckets: recipe.groupBuckets ?? null,
     created_at: recipe.createdAt,
     updated_at: recipe.updatedAt,
   };
@@ -231,6 +236,7 @@ function rowToRecipeVersion(row: RecipeVersionRow): RecipeVersion {
     bakeTimeMinutes: row.bake_time_minutes ?? undefined,
     ovenPowerWatts: row.oven_power_watts ?? undefined,
     wastagePercentOverride: row.wastage_percent_override ?? undefined,
+    groupBuckets: row.group_buckets ?? undefined,
     createdAt: row.created_at,
   };
 }
@@ -255,6 +261,7 @@ function recipeVersionToRow(userId: string, version: RecipeVersion): RecipeVersi
     bake_time_minutes: version.bakeTimeMinutes ?? null,
     oven_power_watts: version.ovenPowerWatts ?? null,
     wastage_percent_override: version.wastagePercentOverride ?? null,
+    group_buckets: version.groupBuckets ?? null,
     created_at: version.createdAt,
   };
 }

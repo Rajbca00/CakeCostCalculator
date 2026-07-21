@@ -1,11 +1,9 @@
 import type { ExtraCost } from '../../types';
 import { generateId } from '../../lib/id';
-import { resolveExtraCostCategory } from '../../lib/costCategory';
 import { TextInput } from '../common/TextInput';
 import { MoneyInput } from '../common/MoneyInput';
 import { Button } from '../common/Button';
 import { GroupSelect } from './GroupSelect';
-import { CategorySelect } from './CategorySelect';
 
 interface ExtraCostEditorProps {
   extraCosts: ExtraCost[];
@@ -53,11 +51,6 @@ export function ExtraCostEditor({ extraCosts, groupOptions, onChange }: ExtraCos
             groupOptions={groupOptions}
             onChange={(groupName) => updateCost(cost.id, { groupName })}
             className="w-36"
-          />
-          <CategorySelect
-            value={resolveExtraCostCategory(cost)}
-            onChange={(category) => updateCost(cost.id, { category })}
-            className="w-32"
           />
           <label className="mb-2 flex items-center gap-1.5 text-sm text-slate-600">
             <input
