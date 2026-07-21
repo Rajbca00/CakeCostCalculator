@@ -7,6 +7,7 @@ import {
   type PackagingTemplate,
   type PriceListingVariant,
   type Recipe,
+  type RecipeVersion,
 } from '../types';
 import { appDataReducer } from './appDataReducer';
 import { useAuth } from './AuthContext';
@@ -21,6 +22,7 @@ import {
   insertPackagingTemplateRow,
   insertPriceListingVariantRow,
   insertRecipeRow,
+  insertRecipeVersionRow,
   replaceAllRows,
   updateIngredientRow,
   updatePackagingTemplateRow,
@@ -35,6 +37,7 @@ interface AppDataContextValue {
   priceListingVariants: PriceListingVariant[];
   settings: BusinessSettings;
   packagingTemplates: PackagingTemplate[];
+  recipeVersions: RecipeVersion[];
   isLoading: boolean;
   addIngredient: (ingredient: Ingredient) => Promise<void>;
   updateIngredient: (ingredient: Ingredient) => Promise<void>;
@@ -49,6 +52,7 @@ interface AppDataContextValue {
   addPackagingTemplate: (template: PackagingTemplate) => Promise<void>;
   updatePackagingTemplate: (template: PackagingTemplate) => Promise<void>;
   deletePackagingTemplate: (id: string) => Promise<void>;
+  addRecipeVersion: (version: RecipeVersion) => Promise<void>;
   replaceAllData: (data: AppData) => Promise<void>;
   getSnapshot: () => AppData;
 }
@@ -266,6 +270,18 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function addRecipeVersion(version: RecipeVersion): Promise<void> {
+    dispatch({ type: 'ADD_RECIPE_VERSION', version });
+    if (!user) return;
+    try {
+      await insertRecipeVersionRow(user.id, version);
+    } catch {
+      showToast('Could not save this version. Refreshing…', 'error');
+      await resync();
+      throw new Error('Failed to save recipe version');
+    }
+  }
+
   async function replaceAllData(data: AppData): Promise<void> {
     dispatch({ type: 'LOAD', data });
     if (!user) return;
@@ -278,6 +294,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     priceListingVariants: state.priceListingVariants,
     settings: state.settings,
     packagingTemplates: state.packagingTemplates,
+    recipeVersions: state.recipeVersions,
     isLoading,
     addIngredient,
     updateIngredient,
@@ -292,6 +309,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     addPackagingTemplate,
     updatePackagingTemplate,
     deletePackagingTemplate,
+    addRecipeVersion,
     replaceAllData,
     getSnapshot: () => state,
   };

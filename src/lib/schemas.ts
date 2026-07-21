@@ -1,12 +1,14 @@
 import { z } from 'zod';
 import { COST_CATEGORIES } from '../types/costCategory';
 import { RECIPE_CATEGORIES } from '../types/recipeCategory';
+import { RECIPE_STATUSES } from '../types/recipeStatus';
 import { DEFAULT_BUSINESS_SETTINGS } from '../types/settings';
 
 export const UnitSchema = z.enum(['g', 'kg', 'oz', 'lb', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'piece']);
 
 export const CostCategorySchema = z.enum(COST_CATEGORIES);
 export const RecipeCategorySchema = z.enum(RECIPE_CATEGORIES);
+export const RecipeStatusSchema = z.enum(RECIPE_STATUSES);
 
 export const IngredientSchema = z.object({
   id: z.string(),
@@ -51,8 +53,31 @@ export const RecipeSchema = z.object({
   bakeTimeMinutes: z.number().optional(),
   ovenPowerWatts: z.number().optional(),
   wastagePercentOverride: z.number().optional(),
+  parentRecipeId: z.string().optional(),
+  status: RecipeStatusSchema.optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
+});
+
+export const RecipeVersionSchema = z.object({
+  id: z.string(),
+  recipeId: z.string(),
+  versionNumber: z.number(),
+  status: RecipeStatusSchema,
+  name: z.string(),
+  baseYieldQuantity: z.number(),
+  baseYieldLabel: z.string(),
+  profitPercent: z.number().default(0),
+  ingredientLines: z.array(RecipeIngredientLineSchema),
+  extraCosts: z.array(ExtraCostSchema),
+  notes: z.string().optional(),
+  category: RecipeCategorySchema.optional(),
+  parentRecipeId: z.string().optional(),
+  activeTimeMinutes: z.number().optional(),
+  bakeTimeMinutes: z.number().optional(),
+  ovenPowerWatts: z.number().optional(),
+  wastagePercentOverride: z.number().optional(),
+  createdAt: z.string(),
 });
 
 export const PriceListingVariantSchema = z.object({
@@ -94,4 +119,5 @@ export const AppDataImportSchema = z.object({
   priceListingVariants: z.array(PriceListingVariantSchema).default([]),
   settings: BusinessSettingsSchema.default(DEFAULT_BUSINESS_SETTINGS),
   packagingTemplates: z.array(PackagingTemplateSchema).default([]),
+  recipeVersions: z.array(RecipeVersionSchema).default([]),
 });

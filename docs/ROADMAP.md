@@ -90,19 +90,36 @@ Schema + Settings, mostly invisible to existing recipes until they opt in.
 captured in Settings but `formatCurrency()` still hardcodes ₹ everywhere;
 wiring it through is deferred to avoid scope creep in this phase.
 
-### Phase 2 — Hierarchy & Versioning (not started)
-The structural change: a "recipe" becomes a family with versions.
-- Parent/child recipe inheritance: child stores only its additional
-  ingredients/costs; effective cost = parent's current-version cost +
-  child's own. Editing the parent recalculates every child automatically.
-- Recipe versions (Draft / Testing / Final), with one version marked
-  "current" per recipe; version history is browsable, not destructive.
-- Recipe Dashboard: ingredient cost, packaging cost, labour, overheads,
-  actual cost, selling price, profit, profit %, food cost % for the
-  current version.
-- Recipe Book page: name, category, parent recipe, version, yield, cost,
-  selling price, status, notes — searchable/filterable, grouped by
-  category, with an expandable parent → children tree.
+### Phase 2 — Hierarchy & Versioning (shipped)
+- **Parent/child inheritance**: `Recipe.parentRecipeId` links a recipe to one
+  parent. `lib/recipeHierarchy.ts#getEffectiveRecipe` merges the whole
+  ancestor chain's ingredient lines/extra costs (root-first) with the
+  recipe's own on every read -- nothing is duplicated or stored, so editing
+  an ancestor is reflected in every descendant's cost immediately. Wired
+  into recipe costing, Price Listing variant costing, and the Recipes list.
+  Cycles are prevented in the UI (`wouldCreateCycle`) and defensively capped
+  in the merge itself.
+- **Recipe versions**: `Recipe.status` (Draft/Testing/Final) is the live
+  row's status. "Save new version" saves the recipe and additionally writes
+  a read-only snapshot to a new `recipe_versions` table (own fields only --
+  it does not snapshot the parent's state at that point in time, so a past
+  version's cost can't be retroactively reconstructed if the parent has
+  since changed). The recipe page shows a version list (v1, v2, ... plus
+  the live row as the current version).
+- **Recipe Dashboard**: folded into the existing Phase 1 "Cost breakdown"
+  panel rather than a separate screen -- it already showed
+  Ingredients/Packaging/Overheads/Labour/Actual cost; this phase adds
+  Food cost % (ingredient cost ÷ selling price).
+- **Recipe Book page** (`/recipe-book`): search by name, filter by category
+  and status, grouped by category, with an expandable parent → children
+  tree (a recipe nests under its parent only if the parent also passed the
+  current filter, so filtering never hides a match; otherwise it's shown as
+  its own top-level row).
+
+**Known gap:** version snapshots are per-recipe only, not per-family, so a
+child's historical cost at a given version can't be reconstructed exactly if
+its parent changed in the meantime -- flagged in the roadmap rather than
+solved now, since fixing it means snapshotting the whole ancestor chain.
 
 ### Phase 3 — Pricing & Customer Menu (not started)
 - Selling price strategies per recipe: Fixed Price, Markup %, Target
@@ -140,7 +157,7 @@ another migration:
 | Phase | Status |
 |---|---|
 | 1. Foundation | Shipped |
-| 2. Hierarchy & Versioning | Not started |
+| 2. Hierarchy & Versioning | Shipped |
 | 3. Pricing & Customer Menu | Not started |
 | 4. Business Intelligence & UI | Not started |
 | 5. Future-Ready Schema | Not started |

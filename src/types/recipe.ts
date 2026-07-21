@@ -1,6 +1,7 @@
 import type { Unit } from './unit';
 import type { CostCategory } from './costCategory';
 import type { RecipeCategory } from './recipeCategory';
+import type { RecipeStatus } from './recipeStatus';
 
 export interface RecipeIngredientLine {
   id: string;
@@ -52,6 +53,15 @@ export interface Recipe {
   ovenPowerWatts?: number;
   /** Overrides the global default wastage % for this recipe. */
   wastagePercentOverride?: number;
+  /**
+   * Recipe this one inherits ingredients/extra costs from. The child stores only its own
+   * additional lines; effective cost = parent's effective lines + this recipe's own lines,
+   * recomputed live so editing the parent automatically updates every child. See
+   * lib/recipeHierarchy.ts. Must not form a cycle (enforced in the UI).
+   */
+  parentRecipeId?: string;
+  /** Lifecycle status of the current (live) version. See also RecipeVersion for history. */
+  status?: RecipeStatus;
   createdAt: string;
   updatedAt: string;
 }

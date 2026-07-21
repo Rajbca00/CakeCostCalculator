@@ -10,6 +10,8 @@ import type {
   Recipe,
   RecipeCategory,
   RecipeIngredientLine,
+  RecipeStatus,
+  RecipeVersion,
   Unit,
 } from '../types';
 
@@ -40,8 +42,32 @@ interface RecipeRow {
   bake_time_minutes: number | null;
   oven_power_watts: number | null;
   wastage_percent_override: number | null;
+  parent_recipe_id: string | null;
+  status: string | null;
   created_at: string;
   updated_at: string;
+}
+
+interface RecipeVersionRow {
+  id: string;
+  user_id: string;
+  recipe_id: string;
+  version_number: number;
+  status: string;
+  name: string;
+  base_yield_quantity: number;
+  base_yield_label: string;
+  profit_percent: number;
+  ingredient_lines: RecipeIngredientLine[];
+  extra_costs: ExtraCost[];
+  notes: string | null;
+  category: string | null;
+  parent_recipe_id: string | null;
+  active_time_minutes: number | null;
+  bake_time_minutes: number | null;
+  oven_power_watts: number | null;
+  wastage_percent_override: number | null;
+  created_at: string;
 }
 
 interface PriceListingVariantRow {
@@ -121,6 +147,8 @@ function rowToRecipe(row: RecipeRow): Recipe {
     bakeTimeMinutes: row.bake_time_minutes ?? undefined,
     ovenPowerWatts: row.oven_power_watts ?? undefined,
     wastagePercentOverride: row.wastage_percent_override ?? undefined,
+    parentRecipeId: row.parent_recipe_id ?? undefined,
+    status: (row.status as RecipeStatus | null) ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -142,8 +170,57 @@ function recipeToRow(userId: string, recipe: Recipe): RecipeRow {
     bake_time_minutes: recipe.bakeTimeMinutes ?? null,
     oven_power_watts: recipe.ovenPowerWatts ?? null,
     wastage_percent_override: recipe.wastagePercentOverride ?? null,
+    parent_recipe_id: recipe.parentRecipeId ?? null,
+    status: recipe.status ?? null,
     created_at: recipe.createdAt,
     updated_at: recipe.updatedAt,
+  };
+}
+
+function rowToRecipeVersion(row: RecipeVersionRow): RecipeVersion {
+  return {
+    id: row.id,
+    recipeId: row.recipe_id,
+    versionNumber: row.version_number,
+    status: row.status as RecipeStatus,
+    name: row.name,
+    baseYieldQuantity: row.base_yield_quantity,
+    baseYieldLabel: row.base_yield_label,
+    profitPercent: row.profit_percent ?? 0,
+    ingredientLines: row.ingredient_lines,
+    extraCosts: row.extra_costs,
+    notes: row.notes ?? undefined,
+    category: (row.category as RecipeCategory | null) ?? undefined,
+    parentRecipeId: row.parent_recipe_id ?? undefined,
+    activeTimeMinutes: row.active_time_minutes ?? undefined,
+    bakeTimeMinutes: row.bake_time_minutes ?? undefined,
+    ovenPowerWatts: row.oven_power_watts ?? undefined,
+    wastagePercentOverride: row.wastage_percent_override ?? undefined,
+    createdAt: row.created_at,
+  };
+}
+
+function recipeVersionToRow(userId: string, version: RecipeVersion): RecipeVersionRow {
+  return {
+    id: version.id,
+    user_id: userId,
+    recipe_id: version.recipeId,
+    version_number: version.versionNumber,
+    status: version.status,
+    name: version.name,
+    base_yield_quantity: version.baseYieldQuantity,
+    base_yield_label: version.baseYieldLabel,
+    profit_percent: version.profitPercent,
+    ingredient_lines: version.ingredientLines,
+    extra_costs: version.extraCosts,
+    notes: version.notes ?? null,
+    category: version.category ?? null,
+    parent_recipe_id: version.parentRecipeId ?? null,
+    active_time_minutes: version.activeTimeMinutes ?? null,
+    bake_time_minutes: version.bakeTimeMinutes ?? null,
+    oven_power_watts: version.ovenPowerWatts ?? null,
+    wastage_percent_override: version.wastagePercentOverride ?? null,
+    created_at: version.createdAt,
   };
 }
 
@@ -239,17 +316,20 @@ export async function fetchAllData(userId: string): Promise<AppData> {
     priceListingVariantsResult,
     settingsResult,
     packagingTemplatesResult,
+    recipeVersionsResult,
   ] = await Promise.all([
     supabase.from('ingredients').select('*').eq('user_id', userId),
     supabase.from('recipes').select('*').eq('user_id', userId),
     supabase.from('price_listing_variants').select('*').eq('user_id', userId),
     supabase.from('business_settings').select('*').eq('user_id', userId).maybeSingle(),
     supabase.from('packaging_templates').select('*').eq('user_id', userId),
+    supabase.from('recipe_versions').select('*').eq('user_id', userId),
   ]);
 
   if (ingredientsResult.error) throw ingredientsResult.error;
   if (recipesResult.error) throw recipesResult.error;
   if (priceListingVariantsResult.error) throw priceListingVariantsResult.error;
+  if (recipeVersionsResult.error) throw recipeVersionsResult.error;
   if (settingsResult.error) throw settingsResult.error;
   if (packagingTemplatesResult.error) throw packagingTemplatesResult.error;
 
@@ -266,6 +346,7 @@ export async function fetchAllData(userId: string): Promise<AppData> {
     packagingTemplates: (packagingTemplatesResult.data as PackagingTemplateRow[]).map(
       rowToPackagingTemplate,
     ),
+    recipeVersions: (recipeVersionsResult.data as RecipeVersionRow[]).map(rowToRecipeVersion),
   };
 }
 
@@ -379,18 +460,32 @@ export async function deletePackagingTemplateRow(userId: string, id: string): Pr
   if (error) throw error;
 }
 
+export async function insertRecipeVersionRow(userId: string, version: RecipeVersion): Promise<void> {
+  const { error } = await supabase
+    .from('recipe_versions')
+    .insert(recipeVersionToRow(userId, version));
+  if (error) throw error;
+}
+
 export async function replaceAllRows(userId: string, data: AppData): Promise<void> {
-  const [deleteIngredients, deleteRecipes, deletePriceListingVariants, deletePackagingTemplates] =
-    await Promise.all([
-      supabase.from('ingredients').delete().eq('user_id', userId),
-      supabase.from('recipes').delete().eq('user_id', userId),
-      supabase.from('price_listing_variants').delete().eq('user_id', userId),
-      supabase.from('packaging_templates').delete().eq('user_id', userId),
-    ]);
+  const [
+    deleteIngredients,
+    deleteRecipes,
+    deletePriceListingVariants,
+    deletePackagingTemplates,
+    deleteRecipeVersions,
+  ] = await Promise.all([
+    supabase.from('ingredients').delete().eq('user_id', userId),
+    supabase.from('recipes').delete().eq('user_id', userId),
+    supabase.from('price_listing_variants').delete().eq('user_id', userId),
+    supabase.from('packaging_templates').delete().eq('user_id', userId),
+    supabase.from('recipe_versions').delete().eq('user_id', userId),
+  ]);
   if (deleteIngredients.error) throw deleteIngredients.error;
   if (deleteRecipes.error) throw deleteRecipes.error;
   if (deletePriceListingVariants.error) throw deletePriceListingVariants.error;
   if (deletePackagingTemplates.error) throw deletePackagingTemplates.error;
+  if (deleteRecipeVersions.error) throw deleteRecipeVersions.error;
 
   if (data.ingredients.length > 0) {
     const { error } = await supabase
@@ -399,10 +494,24 @@ export async function replaceAllRows(userId: string, data: AppData): Promise<voi
     if (error) throw error;
   }
   if (data.recipes.length > 0) {
-    const { error } = await supabase
+    const rows = data.recipes.map((r) => recipeToRow(userId, r));
+    // Insert with parent_recipe_id nulled out first, then set it in a second pass --
+    // a single multi-row insert can't safely rely on parents being pre-inserted before
+    // their children when parent_recipe_id self-references this same table/statement.
+    const { error: insertError } = await supabase
       .from('recipes')
-      .insert(data.recipes.map((r) => recipeToRow(userId, r)));
-    if (error) throw error;
+      .insert(rows.map((r) => ({ ...r, parent_recipe_id: null })));
+    if (insertError) throw insertError;
+
+    for (const row of rows) {
+      if (!row.parent_recipe_id) continue;
+      const { error } = await supabase
+        .from('recipes')
+        .update({ parent_recipe_id: row.parent_recipe_id })
+        .eq('id', row.id)
+        .eq('user_id', userId);
+      if (error) throw error;
+    }
   }
   if (data.priceListingVariants.length > 0) {
     const { error } = await supabase
@@ -414,6 +523,12 @@ export async function replaceAllRows(userId: string, data: AppData): Promise<voi
     const { error } = await supabase
       .from('packaging_templates')
       .insert(data.packagingTemplates.map((t) => packagingTemplateToRow(userId, t)));
+    if (error) throw error;
+  }
+  if (data.recipeVersions.length > 0) {
+    const { error } = await supabase
+      .from('recipe_versions')
+      .insert(data.recipeVersions.map((v) => recipeVersionToRow(userId, v)));
     if (error) throw error;
   }
   await upsertBusinessSettingsRow(userId, data.settings);

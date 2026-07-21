@@ -1,5 +1,5 @@
 import { BUCKET_LABELS, COST_BUCKETS } from '../../types';
-import type { RecipeCostResult } from '../../lib/costCalculations';
+import { foodCostPercent, type RecipeCostResult } from '../../lib/costCalculations';
 import { formatCurrency } from '../../lib/format';
 
 interface RecipeCostBreakdownProps {
@@ -7,8 +7,9 @@ interface RecipeCostBreakdownProps {
 }
 
 /**
- * Additive cost-breakdown view (Ingredients/Packaging/Overheads/Labour + wastage + actual cost).
- * Purely informational -- selling price / profit figures in RecipeCostSummary are unaffected.
+ * Additive cost-breakdown / recipe-dashboard view (Ingredients/Packaging/Overheads/Labour +
+ * wastage + actual cost + food cost %). Purely informational -- selling price / profit figures
+ * in RecipeCostSummary are unaffected.
  */
 export function RecipeCostBreakdown({ result }: RecipeCostBreakdownProps) {
   const hasAutomaticCosts =
@@ -37,6 +38,12 @@ export function RecipeCostBreakdown({ result }: RecipeCostBreakdownProps) {
         <span className="font-semibold text-slate-900">Actual cost</span>
         <span className="font-semibold text-slate-900">{formatCurrency(result.actualCost)}</span>
       </div>
+      {result.profitPercent > 0 && (
+        <div className="flex justify-between py-1">
+          <span className="text-slate-600">Food cost %</span>
+          <span className="font-medium text-slate-800">{foodCostPercent(result)}%</span>
+        </div>
+      )}
       {!hasAutomaticCosts && (
         <p className="mt-2 text-xs text-slate-400">
           Set active time / bake time on this recipe and rates in Settings to include automatic

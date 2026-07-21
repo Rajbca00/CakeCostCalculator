@@ -12,6 +12,7 @@ import {
   useIngredientsById,
   usePriceListingVariants,
   useRecipes,
+  useSettings,
 } from '../state/useAppData';
 import type { PriceListingVariant } from '../types';
 import { generateId } from '../lib/id';
@@ -25,6 +26,7 @@ export function PriceListingPage() {
   const recipes = useRecipes();
   const ingredientsById = useIngredientsById();
   const variants = usePriceListingVariants();
+  const settings = useSettings();
   const { addPriceListingVariant, updatePriceListingVariant, deletePriceListingVariant } =
     useAppDataContext();
   const { showToast } = useToast();
@@ -168,7 +170,13 @@ export function PriceListingPage() {
             <div className="flex flex-col gap-2">
               {activeVariants.map((variant) => {
                 const recipe = recipesById.get(variant.recipeId)!;
-                const result = calculateVariantCost(variant, recipe, ingredientsById);
+                const result = calculateVariantCost(
+                  variant,
+                  recipe,
+                  ingredientsById,
+                  recipesById,
+                  settings,
+                );
                 const included = !excludedIds.has(variant.id);
                 return (
                   <div

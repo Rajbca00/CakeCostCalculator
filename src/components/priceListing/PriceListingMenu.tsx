@@ -1,7 +1,9 @@
 import type { Ingredient, PriceListingVariant, Recipe } from '../../types';
 import { calculateVariantCost } from '../../lib/priceListing';
 import { getGroupNames } from '../../lib/recipeGroups';
+import { getEffectiveRecipe } from '../../lib/recipeHierarchy';
 import { formatCurrency, formatQuantity } from '../../lib/format';
+import { useSettings } from '../../state/useAppData';
 
 interface PriceListingMenuProps {
   variants: PriceListingVariant[];
@@ -16,6 +18,8 @@ export function PriceListingMenu({
   ingredientsById,
   title = 'Price List',
 }: PriceListingMenuProps) {
+  const settings = useSettings();
+
   return (
     <div className="flex flex-col gap-1 bg-white p-6">
       <h2 className="mb-2 text-center text-2xl font-semibold tracking-wide text-slate-900">
@@ -25,8 +29,8 @@ export function PriceListingMenu({
         {variants.map((variant) => {
           const recipe = recipesById.get(variant.recipeId);
           if (!recipe) return null;
-          const result = calculateVariantCost(variant, recipe, ingredientsById);
-          const allGroups = getGroupNames(recipe);
+          const result = calculateVariantCost(variant, recipe, ingredientsById, recipesById, settings);
+          const allGroups = getGroupNames(getEffectiveRecipe(recipe, recipesById));
           const isPartial = variant.groupNames.length < allGroups.length;
           return (
             <div key={variant.id} className="flex items-start justify-between gap-4 py-3">

@@ -43,6 +43,12 @@ alter table recipes add column if not exists bake_time_minutes numeric;
 alter table recipes add column if not exists oven_power_watts numeric;
 alter table recipes add column if not exists wastage_percent_override numeric;
 
+-- Bakery v2 Phase 2: recipe hierarchy + versioning.
+-- parent_recipe_id uses "on delete set null" (not cascade) -- deleting a parent
+-- recipe must never delete its children, only detach them.
+alter table recipes add column if not exists parent_recipe_id uuid references recipes(id) on delete set null;
+alter table recipes add column if not exists status text;
+
 create table if not exists price_listing_variants (
   id uuid primary key,
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -81,17 +87,45 @@ create table if not exists packaging_templates (
   updated_at timestamptz not null
 );
 
+-- Read-only checkpoints of a recipe's own fields, created by "Save new version".
+-- Cascades with the recipe: deleting a recipe deletes its version history too.
+create table if not exists recipe_versions (
+  id uuid primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  recipe_id uuid not null references recipes(id) on delete cascade,
+  version_number integer not null,
+  status text not null,
+  name text not null,
+  base_yield_quantity numeric not null,
+  base_yield_label text not null,
+  profit_percent numeric not null default 0,
+  ingredient_lines jsonb not null default '[]',
+  extra_costs jsonb not null default '[]',
+  notes text,
+  category text,
+  parent_recipe_id uuid,
+  active_time_minutes numeric,
+  bake_time_minutes numeric,
+  oven_power_watts numeric,
+  wastage_percent_override numeric,
+  created_at timestamptz not null
+);
+
 create index if not exists ingredients_user_id_idx on ingredients(user_id);
 create index if not exists recipes_user_id_idx on recipes(user_id);
+create index if not exists recipes_parent_recipe_id_idx on recipes(parent_recipe_id);
 create index if not exists price_listing_variants_user_id_idx on price_listing_variants(user_id);
 create index if not exists price_listing_variants_recipe_id_idx on price_listing_variants(recipe_id);
 create index if not exists packaging_templates_user_id_idx on packaging_templates(user_id);
+create index if not exists recipe_versions_user_id_idx on recipe_versions(user_id);
+create index if not exists recipe_versions_recipe_id_idx on recipe_versions(recipe_id);
 
 alter table ingredients enable row level security;
 alter table recipes enable row level security;
 alter table price_listing_variants enable row level security;
 alter table business_settings enable row level security;
 alter table packaging_templates enable row level security;
+alter table recipe_versions enable row level security;
 
 create policy "Users manage their own ingredients" on ingredients
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -106,4 +140,7 @@ create policy "Users manage their own business settings" on business_settings
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 create policy "Users manage their own packaging templates" on packaging_templates
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "Users manage their own recipe versions" on recipe_versions
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);

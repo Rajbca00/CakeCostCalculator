@@ -31,6 +31,8 @@ export function cloneRecipeWithName(source: Recipe, newName: string): Recipe {
     bakeTimeMinutes: source.bakeTimeMinutes,
     ovenPowerWatts: source.ovenPowerWatts,
     wastagePercentOverride: source.wastagePercentOverride,
+    parentRecipeId: source.parentRecipeId,
+    status: 'Draft',
     createdAt: now,
     updatedAt: now,
   };

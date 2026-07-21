@@ -5,6 +5,7 @@ import {
   type PackagingTemplate,
   type PriceListingVariant,
   type Recipe,
+  type RecipeVersion,
 } from '../types';
 
 export type AppDataAction =
@@ -21,7 +22,8 @@ export type AppDataAction =
   | { type: 'SET_SETTINGS'; settings: BusinessSettings }
   | { type: 'ADD_PACKAGING_TEMPLATE'; template: PackagingTemplate }
   | { type: 'UPDATE_PACKAGING_TEMPLATE'; template: PackagingTemplate }
-  | { type: 'DELETE_PACKAGING_TEMPLATE'; id: string };
+  | { type: 'DELETE_PACKAGING_TEMPLATE'; id: string }
+  | { type: 'ADD_RECIPE_VERSION'; version: RecipeVersion };
 
 export function appDataReducer(state: AppData, action: AppDataAction): AppData {
   switch (action.type) {
@@ -51,10 +53,13 @@ export function appDataReducer(state: AppData, action: AppDataAction): AppData {
     case 'DELETE_RECIPE':
       return {
         ...state,
-        recipes: state.recipes.filter((r) => r.id !== action.id),
+        recipes: state.recipes
+          .filter((r) => r.id !== action.id)
+          .map((r) => (r.parentRecipeId === action.id ? { ...r, parentRecipeId: undefined } : r)),
         priceListingVariants: state.priceListingVariants.filter(
           (v) => v.recipeId !== action.id,
         ),
+        recipeVersions: state.recipeVersions.filter((v) => v.recipeId !== action.id),
       };
     case 'ADD_PRICE_LISTING_VARIANT':
       return { ...state, priceListingVariants: [...state.priceListingVariants, action.variant] };
@@ -86,6 +91,8 @@ export function appDataReducer(state: AppData, action: AppDataAction): AppData {
         ...state,
         packagingTemplates: state.packagingTemplates.filter((t) => t.id !== action.id),
       };
+    case 'ADD_RECIPE_VERSION':
+      return { ...state, recipeVersions: [...state.recipeVersions, action.version] };
     default:
       return state;
   }

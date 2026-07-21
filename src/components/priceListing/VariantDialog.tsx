@@ -6,6 +6,7 @@ import { Button } from '../common/Button';
 import { RecipeGroupFilter } from '../scaling/RecipeGroupFilter';
 import { RecipeScalePanel } from '../scaling/RecipeScalePanel';
 import { getGroupNames } from '../../lib/recipeGroups';
+import { getEffectiveRecipe } from '../../lib/recipeHierarchy';
 import { suggestVariantName } from '../../lib/priceListing';
 import { isNonEmptyString, isPositiveNumber } from '../../lib/validation';
 import type { PriceListingVariant, Recipe } from '../../types';
@@ -58,14 +59,18 @@ export function VariantDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editingVariant?.id]);
 
+  const recipesById = useMemo(() => new Map(recipes.map((r) => [r.id, r])), [recipes]);
   const recipe = useMemo(() => recipes.find((r) => r.id === recipeId), [recipes, recipeId]);
-  const groupNames = useMemo(() => (recipe ? getGroupNames(recipe) : []), [recipe]);
+  const groupNames = useMemo(
+    () => (recipe ? getGroupNames(getEffectiveRecipe(recipe, recipesById)) : []),
+    [recipe, recipesById],
+  );
 
   useEffect(() => {
     // Only reset groups/yield when the user actively switches recipes, not on initial open for edit.
     if (!open || recipeId === editingVariant?.recipeId) return;
     const r = recipes.find((rr) => rr.id === recipeId);
-    setSelectedGroups(new Set(r ? getGroupNames(r) : []));
+    setSelectedGroups(new Set(r ? getGroupNames(getEffectiveRecipe(r, recipesById)) : []));
     setMultiplier(1);
     setNameEdited(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -77,8 +82,14 @@ export function VariantDialog({
       setName('');
       return;
     }
-    setName(suggestVariantName(recipe, groupNames.filter((g) => selectedGroups.has(g))));
-  }, [recipe, groupNames, selectedGroups, nameEdited]);
+    setName(
+      suggestVariantName(
+        recipe,
+        groupNames.filter((g) => selectedGroups.has(g)),
+        recipesById,
+      ),
+    );
+  }, [recipe, groupNames, selectedGroups, nameEdited, recipesById]);
 
   if (!open) return null;
 

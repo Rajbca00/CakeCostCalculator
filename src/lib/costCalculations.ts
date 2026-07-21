@@ -213,3 +213,9 @@ export function calculateRecipeCost(
     actualCost,
   };
 }
+
+/** Ingredient cost as a % of the selling price -- a standard restaurant/bakery costing metric. */
+export function foodCostPercent(result: RecipeCostResult): number {
+  if (result.sellingTotal <= 0) return 0;
+  return round2((result.ingredientsTotal / result.sellingTotal) * 100);
+}
