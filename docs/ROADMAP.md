@@ -65,6 +65,14 @@ These were confirmed with the bakery owner before implementation started:
    change the selling price of any existing recipe that already has active
    time / bake time / a wastage override set — deliberately, on the owner's
    instruction, applied automatically (no opt-in toggle).
+5. **Active time doesn't scale with batch size**: `activeTimeMinutes` used to
+   be multiplied by the scaling multiplier before computing labour cost, so
+   scaling a recipe down (e.g. to half yield) would halve its labour cost.
+   The owner pointed out hands-on effort (mixing, decorating, etc.) doesn't
+   shrink or grow proportionally with batch size — the same way
+   `bakeTimeMinutes` was already treated as fixed regardless of multiplier.
+   `activeTimeMinutes` is now likewise always fixed, never scaled by
+   multiplier, for consistency with bake time.
 
 ## Open assumption to confirm before Phase 1 costing work lands
 
