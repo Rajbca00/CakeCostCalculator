@@ -29,6 +29,12 @@ export function RecipeCostSummary({ result, yieldLabel }: RecipeCostSummaryProps
         </span>
         <span className="font-semibold text-slate-900">{formatCurrency(result.total)}</span>
       </div>
+      {(result.wastageAmount > 0 || result.laborAmount > 0 || result.electricityAmount > 0) && (
+        <p className="py-0.5 text-xs text-slate-400">
+          Includes {formatCurrency(result.wastageAmount)} wastage, {formatCurrency(result.laborAmount)}{' '}
+          labour, {formatCurrency(result.electricityAmount)} electricity
+        </p>
+      )}
 
       {result.profitPercent > 0 && (
         <>

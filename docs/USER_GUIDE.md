@@ -82,7 +82,10 @@ variations will inherit from.
 - Save recipe
 
 You now have a costed base recipe with its own Cost breakdown: Ingredients,
-Packaging, Overheads, Labour, Wastage, and **Actual cost** all itemised.
+Packaging, Overheads, Labour, Wastage, and **Total cost (priced)** all
+itemised. Wastage, labour, and electricity aren't just shown for reference —
+they're folded straight into the recipe's Cost total, so the selling price
+(Profit % applied on top) already covers them.
 
 ---
 

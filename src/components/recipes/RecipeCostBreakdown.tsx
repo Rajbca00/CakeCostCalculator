@@ -7,9 +7,10 @@ interface RecipeCostBreakdownProps {
 }
 
 /**
- * Additive cost-breakdown / recipe-dashboard view (Ingredients/Packaging/Overheads/Labour +
- * wastage + actual cost + food cost %). Purely informational -- selling price / profit figures
- * in RecipeCostSummary are unaffected.
+ * Cost-breakdown / recipe-dashboard view (Ingredients/Packaging/Overheads/Labour + wastage +
+ * total cost + food cost %). Wastage, labour, and electricity here are also folded into the
+ * `total`/selling price shown in RecipeCostSummary above -- this is a breakdown of that same
+ * fully-loaded cost, not a separate reference figure.
  */
 export function RecipeCostBreakdown({ result }: RecipeCostBreakdownProps) {
   const hasAutomaticCosts =
@@ -51,7 +52,7 @@ export function RecipeCostBreakdown({ result }: RecipeCostBreakdownProps) {
         )}
       </div>
       <div className="mt-2 flex justify-between border-t border-slate-200 py-1 pt-2">
-        <span className="font-semibold text-slate-900">Actual cost</span>
+        <span className="font-semibold text-slate-900">Total cost (priced)</span>
         <span className="font-semibold text-slate-900">{formatCurrency(result.actualCost)}</span>
       </div>
       {result.profitPercent > 0 && (
@@ -62,8 +63,8 @@ export function RecipeCostBreakdown({ result }: RecipeCostBreakdownProps) {
       )}
       {!hasAutomaticCosts && (
         <p className="mt-2 text-xs text-slate-400">
-          Set active time / bake time on this recipe and rates in Settings to include automatic
-          labour, electricity, and wastage costs here.
+          Set active time / bake time on this recipe and rates in Settings to have automatic
+          labour, electricity, and wastage costs included in the selling price.
         </p>
       )}
     </div>
