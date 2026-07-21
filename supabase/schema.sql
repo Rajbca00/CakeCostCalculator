@@ -169,26 +169,36 @@ alter table recipe_versions enable row level security;
 alter table add_ons enable row level security;
 alter table quotes enable row level security;
 
+-- "drop policy if exists" before each "create policy" makes this whole file safely
+-- re-runnable end-to-end (Postgres has no "create policy if not exists").
+drop policy if exists "Users manage their own ingredients" on ingredients;
 create policy "Users manage their own ingredients" on ingredients
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists "Users manage their own recipes" on recipes;
 create policy "Users manage their own recipes" on recipes
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists "Users manage their own price listing variants" on price_listing_variants;
 create policy "Users manage their own price listing variants" on price_listing_variants
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists "Users manage their own business settings" on business_settings;
 create policy "Users manage their own business settings" on business_settings
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists "Users manage their own packaging templates" on packaging_templates;
 create policy "Users manage their own packaging templates" on packaging_templates
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists "Users manage their own recipe versions" on recipe_versions;
 create policy "Users manage their own recipe versions" on recipe_versions
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists "Users manage their own add-ons" on add_ons;
 create policy "Users manage their own add-ons" on add_ons
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists "Users manage their own quotes" on quotes;
 create policy "Users manage their own quotes" on quotes
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
