@@ -82,7 +82,7 @@ export interface RecipeCostResult {
   wastagePercent: number;
   /** ingredientsTotal * wastagePercent / 100. Folded into `total`. */
   wastageAmount: number;
-  /** recipe.activeTimeMinutes (scaled by multiplier) * settings.laborHourlyRate / 60. Folded into `total`. */
+  /** recipe.activeTimeMinutes (not scaled by multiplier -- see bakeTimeMinutes) * settings.laborHourlyRate / 60. Folded into `total`. */
   laborAmount: number;
   /** (recipe.ovenPowerWatts or settings default) / 1000 * settings.electricityRatePerUnit * recipe.bakeTimeMinutes / 60. Folded into `total`. */
   electricityAmount: number;
@@ -149,7 +149,10 @@ export function calculateRecipeCost(
   );
   const wastageAmount = round2(ingredientsTotal * (wastagePercent / 100));
 
-  const laborMinutes = (recipe.activeTimeMinutes ?? 0) * multiplier;
+  // Active time isn't scaled by multiplier -- like bake time, it's treated as a property
+  // of the process (mixing, decorating, ...), not the batch size, since a bigger or smaller
+  // batch doesn't take proportionally more or less hands-on time.
+  const laborMinutes = recipe.activeTimeMinutes ?? 0;
   const laborAmount = settings ? round2(laborMinutes * (settings.laborHourlyRate / 60)) : 0;
 
   const ovenPowerWatts = recipe.ovenPowerWatts ?? settings?.ovenPowerWatts ?? 0;
