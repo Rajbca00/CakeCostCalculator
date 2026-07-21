@@ -12,9 +12,6 @@ create table if not exists ingredients (
   updated_at timestamptz not null
 );
 
--- Drives the Egg/Eggless flag shown on any recipe that uses this ingredient.
-alter table ingredients add column if not exists contains_egg boolean;
-
 create table if not exists recipes (
   id uuid primary key,
   user_id uuid not null references auth.users(id) on delete cascade,
