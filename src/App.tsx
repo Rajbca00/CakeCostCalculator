@@ -9,7 +9,11 @@ import { HomePage } from './pages/HomePage';
 import { IngredientsPage } from './pages/IngredientsPage';
 import { RecipesPage } from './pages/RecipesPage';
 import { RecipeDetailPage } from './pages/RecipeDetailPage';
+import { RecipeBookPage } from './pages/RecipeBookPage';
 import { PriceListingPage } from './pages/PriceListingPage';
+import { QuoteBuilderPage } from './pages/QuoteBuilderPage';
+import { BusinessDashboardPage } from './pages/BusinessDashboardPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 function App() {
@@ -28,7 +32,11 @@ function App() {
                     <Route path="/recipes" element={<RecipesPage />} />
                     <Route path="/recipes/new" element={<RecipeDetailPage />} />
                     <Route path="/recipes/:id" element={<RecipeDetailPage />} />
+                    <Route path="/recipe-book" element={<RecipeBookPage />} />
                     <Route path="/price-listing" element={<PriceListingPage />} />
+                    <Route path="/quotes" element={<QuoteBuilderPage />} />
+                    <Route path="/dashboard" element={<BusinessDashboardPage />} />
+                    <Route path="/settings" element={<SettingsPage />} />
                     <Route path="*" element={<NotFoundPage />} />
                   </Routes>
                 </div>

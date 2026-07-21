@@ -22,8 +22,20 @@ export function NavBar() {
           <NavLink to="/recipes" className={linkClass}>
             Recipes
           </NavLink>
+          <NavLink to="/recipe-book" className={linkClass}>
+            Recipe Book
+          </NavLink>
           <NavLink to="/price-listing" className={linkClass}>
             Price Listing
+          </NavLink>
+          <NavLink to="/quotes" className={linkClass}>
+            Quotes
+          </NavLink>
+          <NavLink to="/dashboard" className={linkClass}>
+            Dashboard
+          </NavLink>
+          <NavLink to="/settings" className={linkClass}>
+            Settings
           </NavLink>
           {user?.email && (
             <span className="hidden truncate text-sm text-slate-400 sm:inline">{user.email}</span>

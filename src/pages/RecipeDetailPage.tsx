@@ -7,22 +7,38 @@ import { NumberInput } from '../components/common/NumberInput';
 import { RecipeIngredientLineEditor } from '../components/recipes/RecipeIngredientLineEditor';
 import { ExtraCostEditor } from '../components/recipes/ExtraCostEditor';
 import { RecipeCostSummary } from '../components/recipes/RecipeCostSummary';
+import { RecipeCostBreakdown } from '../components/recipes/RecipeCostBreakdown';
+import { RecipeVersionHistory } from '../components/recipes/RecipeVersionHistory';
 import { CloneRecipeDialog } from '../components/recipes/CloneRecipeDialog';
 import { RenameRecipeDialog } from '../components/recipes/RenameRecipeDialog';
+import { Select } from '../components/common/Select';
 import { RecipeScalePanel } from '../components/scaling/RecipeScalePanel';
 import { RecipeGroupFilter } from '../components/scaling/RecipeGroupFilter';
 import { ScaledIngredientTable } from '../components/scaling/ScaledIngredientTable';
+import { Link } from 'react-router-dom';
 import {
   useAppDataContext,
   useIngredients,
   useIngredientsById,
   useRecipeById,
   useRecipes,
+  useRecipesById,
+  useRecipeVersions,
+  useSettings,
 } from '../state/useAppData';
-import type { ExtraCost, Recipe, RecipeIngredientLine } from '../types';
+import {
+  RECIPE_CATEGORIES,
+  RECIPE_STATUSES,
+  type ExtraCost,
+  type Recipe,
+  type RecipeCategory,
+  type RecipeIngredientLine,
+  type RecipeStatus,
+} from '../types';
 import { generateId } from '../lib/id';
 import { calculateRecipeCost } from '../lib/costCalculations';
 import { getGroupNames } from '../lib/recipeGroups';
+import { getEffectiveRecipe, wouldCreateCycle } from '../lib/recipeHierarchy';
 import {
   isNonEmptyString,
   isNonNegativeNumber,
@@ -31,7 +47,7 @@ import {
 } from '../lib/validation';
 import { cloneRecipeWithName } from '../lib/recipeClone';
 import { captureElementAsPng, shareOrDownloadImage } from '../lib/shareImage';
-import { formatQuantity } from '../lib/format';
+import { formatCurrency, formatQuantity } from '../lib/format';
 import { useToast } from '../components/layout/Toast';
 
 interface DraftState {
@@ -42,6 +58,13 @@ interface DraftState {
   ingredientLines: RecipeIngredientLine[];
   extraCosts: ExtraCost[];
   notes: string;
+  category: RecipeCategory | '';
+  activeTimeMinutes: number;
+  bakeTimeMinutes: number;
+  ovenPowerWatts: number;
+  wastagePercentOverride: number;
+  parentRecipeId: string;
+  status: RecipeStatus;
 }
 
 function draftFromRecipe(recipe?: Recipe): DraftState {
@@ -53,6 +76,13 @@ function draftFromRecipe(recipe?: Recipe): DraftState {
     ingredientLines: recipe?.ingredientLines ?? [],
     extraCosts: recipe?.extraCosts ?? [],
     notes: recipe?.notes ?? '',
+    category: recipe?.category ?? '',
+    activeTimeMinutes: recipe?.activeTimeMinutes ?? NaN,
+    bakeTimeMinutes: recipe?.bakeTimeMinutes ?? NaN,
+    ovenPowerWatts: recipe?.ovenPowerWatts ?? NaN,
+    wastagePercentOverride: recipe?.wastagePercentOverride ?? NaN,
+    parentRecipeId: recipe?.parentRecipeId ?? '',
+    status: recipe?.status ?? 'Draft',
   };
 }
 
@@ -64,7 +94,10 @@ export function RecipeDetailPage() {
   const ingredients = useIngredients();
   const ingredientsById = useIngredientsById();
   const recipes = useRecipes();
-  const { addRecipe, updateRecipe } = useAppDataContext();
+  const recipesById = useRecipesById();
+  const recipeVersions = useRecipeVersions(recipe?.id);
+  const settings = useSettings();
+  const { addRecipe, updateRecipe, addRecipeVersion } = useAppDataContext();
   const { showToast } = useToast();
 
   const [draft, setDraft] = useState<DraftState>(() => draftFromRecipe(recipe));
@@ -77,17 +110,48 @@ export function RecipeDetailPage() {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savingVersion, setSavingVersion] = useState(false);
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
   const [sharing, setSharing] = useState(false);
   const shareRef = useRef<HTMLDivElement>(null);
 
-  const recipeGroupNames = useMemo(() => (recipe ? getGroupNames(recipe) : []), [recipe]);
+  const effectiveRecipe = useMemo(
+    () => (recipe ? getEffectiveRecipe(recipe, recipesById) : undefined),
+    [recipe, recipesById],
+  );
+  const recipeGroupNames = useMemo(
+    () => (effectiveRecipe ? getGroupNames(effectiveRecipe) : []),
+    [effectiveRecipe],
+  );
   const hasMultipleGroups = recipeGroupNames.length > 1;
 
   useEffect(() => {
-    if (recipe) setSelectedGroups(new Set(getGroupNames(recipe)));
+    if (effectiveRecipe) setSelectedGroups(new Set(getGroupNames(effectiveRecipe)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recipe?.id]);
+
+  const parentRecipe = draft.parentRecipeId ? recipesById.get(draft.parentRecipeId) : undefined;
+  const parentCostResult = useMemo(
+    () =>
+      parentRecipe
+        ? calculateRecipeCost(
+            getEffectiveRecipe(parentRecipe, recipesById),
+            ingredientsById,
+            1,
+            undefined,
+            0,
+            settings,
+          )
+        : undefined,
+    [parentRecipe, recipesById, ingredientsById, settings],
+  );
+  const parentOptions = useMemo(
+    () =>
+      recipes.filter(
+        (r) => !recipe || (r.id !== recipe.id && !wouldCreateCycle(recipe.id, r.id, recipesById)),
+      ),
+    [recipes, recipe, recipesById],
+  );
 
   const draftGroupSuggestions = useMemo(() => {
     const seen: string[] = [];
@@ -110,6 +174,17 @@ export function RecipeDetailPage() {
       ingredientLines: draft.ingredientLines,
       extraCosts: draft.extraCosts,
       notes: draft.notes,
+      category: draft.category || undefined,
+      activeTimeMinutes: isNonNegativeNumber(draft.activeTimeMinutes)
+        ? draft.activeTimeMinutes
+        : undefined,
+      bakeTimeMinutes: isNonNegativeNumber(draft.bakeTimeMinutes) ? draft.bakeTimeMinutes : undefined,
+      ovenPowerWatts: isNonNegativeNumber(draft.ovenPowerWatts) ? draft.ovenPowerWatts : undefined,
+      wastagePercentOverride: isNonNegativeNumber(draft.wastagePercentOverride)
+        ? draft.wastagePercentOverride
+        : undefined,
+      parentRecipeId: draft.parentRecipeId || undefined,
+      status: draft.status,
       createdAt: recipe?.createdAt ?? '',
       updatedAt: recipe?.updatedAt ?? '',
     }),
@@ -117,28 +192,38 @@ export function RecipeDetailPage() {
   );
 
   const baseCostResult = useMemo(
-    () => calculateRecipeCost(draftAsRecipe, ingredientsById, 1),
-    [draftAsRecipe, ingredientsById],
+    () =>
+      calculateRecipeCost(
+        getEffectiveRecipe(draftAsRecipe, recipesById),
+        ingredientsById,
+        1,
+        undefined,
+        0,
+        settings,
+      ),
+    [draftAsRecipe, recipesById, ingredientsById, settings],
   );
 
   const scaledCostResult = useMemo(
     () =>
-      recipe
+      effectiveRecipe
         ? calculateRecipeCost(
-            recipe,
+            effectiveRecipe,
             ingredientsById,
             multiplier,
             hasMultipleGroups ? selectedGroups : undefined,
             discountPercent,
+            settings,
           )
         : baseCostResult,
     [
-      recipe,
+      effectiveRecipe,
       ingredientsById,
       multiplier,
       hasMultipleGroups,
       selectedGroups,
       discountPercent,
+      settings,
       baseCostResult,
     ],
   );
@@ -208,12 +293,9 @@ export function RecipeDetailPage() {
     }
   }
 
-  async function handleSave() {
-    setTouched(true);
-    if (hasErrors || saving) return;
-
+  function buildSavedRecipe(): Recipe {
     const now = new Date().toISOString();
-    const saved: Recipe = {
+    return {
       id: recipe?.id ?? generateId(),
       name: draft.name.trim(),
       baseYieldQuantity: draft.baseYieldQuantity,
@@ -222,10 +304,27 @@ export function RecipeDetailPage() {
       ingredientLines: draft.ingredientLines,
       extraCosts: draft.extraCosts,
       notes: draft.notes.trim() || undefined,
+      category: draft.category || undefined,
+      activeTimeMinutes: isNonNegativeNumber(draft.activeTimeMinutes)
+        ? draft.activeTimeMinutes
+        : undefined,
+      bakeTimeMinutes: isNonNegativeNumber(draft.bakeTimeMinutes) ? draft.bakeTimeMinutes : undefined,
+      ovenPowerWatts: isNonNegativeNumber(draft.ovenPowerWatts) ? draft.ovenPowerWatts : undefined,
+      wastagePercentOverride: isNonNegativeNumber(draft.wastagePercentOverride)
+        ? draft.wastagePercentOverride
+        : undefined,
+      parentRecipeId: draft.parentRecipeId || undefined,
+      status: draft.status,
       createdAt: recipe?.createdAt ?? now,
       updatedAt: now,
     };
+  }
 
+  async function handleSave() {
+    setTouched(true);
+    if (hasErrors || saving) return;
+
+    const saved = buildSavedRecipe();
     setSaving(true);
     try {
       if (recipe) {
@@ -238,6 +337,42 @@ export function RecipeDetailPage() {
       // failure toast already shown by the context
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleSaveNewVersion() {
+    setTouched(true);
+    if (hasErrors || savingVersion || !recipe) return;
+
+    const saved = buildSavedRecipe();
+    setSavingVersion(true);
+    try {
+      await updateRecipe(saved);
+      await addRecipeVersion({
+        id: generateId(),
+        recipeId: saved.id,
+        versionNumber: recipeVersions.length + 1,
+        status: saved.status ?? 'Draft',
+        name: saved.name,
+        baseYieldQuantity: saved.baseYieldQuantity,
+        baseYieldLabel: saved.baseYieldLabel,
+        profitPercent: saved.profitPercent,
+        ingredientLines: saved.ingredientLines,
+        extraCosts: saved.extraCosts,
+        notes: saved.notes,
+        category: saved.category,
+        parentRecipeId: saved.parentRecipeId,
+        activeTimeMinutes: saved.activeTimeMinutes,
+        bakeTimeMinutes: saved.bakeTimeMinutes,
+        ovenPowerWatts: saved.ovenPowerWatts,
+        wastagePercentOverride: saved.wastagePercentOverride,
+        createdAt: new Date().toISOString(),
+      });
+      showToast(`Saved as v${recipeVersions.length + 1}`, 'success');
+    } catch {
+      // failure toast already shown by the context
+    } finally {
+      setSavingVersion(false);
     }
   }
 
@@ -329,7 +464,7 @@ export function RecipeDetailPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
             <NumberInput
               label="Profit % (optional)"
               value={draft.profitPercent}
@@ -338,6 +473,95 @@ export function RecipeDetailPage() {
               min={0}
               placeholder="e.g. 30"
             />
+            <Select
+              label="Category (optional)"
+              value={draft.category}
+              onChange={(e) =>
+                setDraft((d) => ({ ...d, category: e.target.value as RecipeCategory | '' }))
+              }
+            >
+              <option value="">No category</option>
+              {RECIPE_CATEGORIES.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </Select>
+            <Select
+              label="Parent recipe (optional)"
+              value={draft.parentRecipeId}
+              onChange={(e) => setDraft((d) => ({ ...d, parentRecipeId: e.target.value }))}
+            >
+              <option value="">No parent -- standalone recipe</option>
+              {parentOptions.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </Select>
+            <Select
+              label="Status"
+              value={draft.status}
+              onChange={(e) => setDraft((d) => ({ ...d, status: e.target.value as RecipeStatus }))}
+            >
+              {RECIPE_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          {parentRecipe && parentCostResult && (
+            <p className="rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-600">
+              Inherits{' '}
+              <Link to={`/recipes/${parentRecipe.id}`} className="text-rose-600 hover:underline">
+                {parentRecipe.name}
+              </Link>
+              's {parentRecipe.ingredientLines.length} ingredient line
+              {parentRecipe.ingredientLines.length === 1 ? '' : 's'} (
+              {formatCurrency(parentCostResult.total)} inherited cost) -- editing that recipe
+              updates this one automatically.
+            </p>
+          )}
+
+          <div>
+            <h2 className="mb-2 text-sm font-semibold text-slate-800">
+              Labour &amp; electricity{' '}
+              <span className="font-normal text-slate-400">
+                (optional -- uses rates from Settings)
+              </span>
+            </h2>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <NumberInput
+                label="Active time (min)"
+                value={draft.activeTimeMinutes}
+                onValueChange={(v) => setDraft((d) => ({ ...d, activeTimeMinutes: v }))}
+                min={0}
+                placeholder="e.g. 25"
+              />
+              <NumberInput
+                label="Bake time (min)"
+                value={draft.bakeTimeMinutes}
+                onValueChange={(v) => setDraft((d) => ({ ...d, bakeTimeMinutes: v }))}
+                min={0}
+                placeholder="e.g. 40"
+              />
+              <NumberInput
+                label="Oven power override (W)"
+                value={draft.ovenPowerWatts}
+                onValueChange={(v) => setDraft((d) => ({ ...d, ovenPowerWatts: v }))}
+                min={0}
+                placeholder={`Default ${settings.ovenPowerWatts}`}
+              />
+              <NumberInput
+                label="Wastage % override"
+                value={draft.wastagePercentOverride}
+                onValueChange={(v) => setDraft((d) => ({ ...d, wastagePercentOverride: v }))}
+                min={0}
+                placeholder={`Default ${settings.wastagePercent}`}
+              />
+            </div>
           </div>
 
           <div>
@@ -367,12 +591,31 @@ export function RecipeDetailPage() {
           </div>
 
           <RecipeCostSummary result={baseCostResult} yieldLabel={draft.baseYieldLabel} />
+          <RecipeCostBreakdown result={baseCostResult} />
 
-          <div className="flex justify-end gap-2">
+          {recipe && (
+            <div>
+              <h2 className="mb-2 text-sm font-semibold text-slate-800">Versions</h2>
+              <RecipeVersionHistory versions={recipeVersions} currentStatus={draft.status} />
+            </div>
+          )}
+
+          <div className="flex flex-wrap justify-end gap-2">
             <Button variant="secondary" onClick={() => navigate('/recipes')} disabled={saving}>
               Cancel
             </Button>
-            <Button onClick={handleSave} loading={saving}>
+            {recipe && (
+              <Button
+                variant="secondary"
+                onClick={handleSaveNewVersion}
+                loading={savingVersion}
+                disabled={saving}
+                title="Save the recipe and checkpoint this state as a new version"
+              >
+                Save new version
+              </Button>
+            )}
+            <Button onClick={handleSave} loading={saving} disabled={savingVersion}>
               Save recipe
             </Button>
           </div>
@@ -426,6 +669,7 @@ export function RecipeDetailPage() {
               </div>
               <ScaledIngredientTable result={scaledCostResult} groupBy={hasMultipleGroups} />
               <RecipeCostSummary result={scaledCostResult} yieldLabel={recipe.baseYieldLabel} />
+              <RecipeCostBreakdown result={scaledCostResult} />
             </div>
           </div>
         )

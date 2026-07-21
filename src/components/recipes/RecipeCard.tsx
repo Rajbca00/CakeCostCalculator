@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom';
 import type { Recipe } from '../../types';
 import { calculateRecipeCost } from '../../lib/costCalculations';
+import { getEffectiveRecipe } from '../../lib/recipeHierarchy';
 import { formatCurrency } from '../../lib/format';
-import { useIngredientsById } from '../../state/useAppData';
+import { useIngredientsById, useRecipesById, useSettings } from '../../state/useAppData';
 import { Button } from '../common/Button';
 
 interface RecipeCardProps {
@@ -14,7 +15,17 @@ interface RecipeCardProps {
 
 export function RecipeCard({ recipe, onRename, onClone, onDelete }: RecipeCardProps) {
   const ingredientsById = useIngredientsById();
-  const result = calculateRecipeCost(recipe, ingredientsById);
+  const recipesById = useRecipesById();
+  const settings = useSettings();
+  const result = calculateRecipeCost(
+    getEffectiveRecipe(recipe, recipesById),
+    ingredientsById,
+    1,
+    undefined,
+    0,
+    settings,
+  );
+  const parent = recipe.parentRecipeId ? recipesById.get(recipe.parentRecipeId) : undefined;
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -22,6 +33,15 @@ export function RecipeCard({ recipe, onRename, onClone, onDelete }: RecipeCardPr
         <Link to={`/recipes/${recipe.id}`} className="font-medium text-slate-900 hover:underline">
           {recipe.name}
         </Link>
+        {(recipe.category || recipe.status || parent) && (
+          <p className="text-xs text-slate-400">
+            {recipe.category && <span>{recipe.category}</span>}
+            {recipe.category && (recipe.status || parent) && ' · '}
+            {recipe.status && <span>{recipe.status}</span>}
+            {recipe.status && parent && ' · '}
+            {parent && <span>Child of {parent.name}</span>}
+          </p>
+        )}
         <p className="text-sm text-slate-500">
           {recipe.baseYieldQuantity} {recipe.baseYieldLabel} · {formatCurrency(result.total)} total
           {result.profitPercent > 0 && (
