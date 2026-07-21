@@ -54,6 +54,12 @@ export interface RecipeCostResult {
   extraCosts: RecipeCostExtraResult[];
   ingredientsTotal: number;
   extrasTotal: number;
+  /**
+   * ingredientsTotal + extrasTotal + wastageAmount + laborAmount + electricityAmount --
+   * the fully-loaded cost. Every selling-price figure below (sellingTotal, finalPrice, and
+   * pricing-strategy calculations) is derived from this, so automatic wastage/labour/
+   * electricity costs are priced in, not just shown for reference.
+   */
   total: number;
   yieldQuantity: number;
   hasMissingIngredients: boolean;
@@ -69,18 +75,18 @@ export interface RecipeCostResult {
   /** Selling price after the discount is applied. */
   finalPrice: number;
 
-  // --- Cost-breakdown dashboard fields (additive; never affect the pricing fields above) ---
+  // --- Cost-breakdown dashboard fields ---
   /** Sum of all ingredient-line/extra-cost amounts per dashboard bucket, per each group's Recipe.groupBuckets assignment. */
   bucketTotals: Record<CostBucket, number>;
-  /** Wastage % actually applied (recipe override, else global settings, else 0). */
+  /** Wastage % actually applied (recipe override, else global settings, else 0). Folded into `total`. */
   wastagePercent: number;
-  /** ingredientsTotal * wastagePercent / 100. */
+  /** ingredientsTotal * wastagePercent / 100. Folded into `total`. */
   wastageAmount: number;
-  /** recipe.activeTimeMinutes (scaled by multiplier) * settings.laborHourlyRate / 60. */
+  /** recipe.activeTimeMinutes (scaled by multiplier) * settings.laborHourlyRate / 60. Folded into `total`. */
   laborAmount: number;
-  /** (recipe.ovenPowerWatts or settings default) / 1000 * settings.electricityRatePerUnit * recipe.bakeTimeMinutes / 60. */
+  /** (recipe.ovenPowerWatts or settings default) / 1000 * settings.electricityRatePerUnit * recipe.bakeTimeMinutes / 60. Folded into `total`. */
   electricityAmount: number;
-  /** total + wastageAmount + laborAmount + electricityAmount -- the fully-loaded cost. Not used for pricing (yet). */
+  /** Equal to `total` -- kept for existing dashboard/quote consumers of the fully-loaded cost. */
   actualCost: number;
 }
 
@@ -130,19 +136,12 @@ export function calculateRecipeCost(
   // downstream figure (total, selling price, profit) from those rounded
   // values. This guarantees the displayed figures actually add up for a
   // user checking with a calculator — e.g. ingredientsTotal + extrasTotal
-  // always equals total exactly, and total + profitAmount always equals
-  // sellingTotal exactly, instead of drifting a cent apart because each
-  // was rounded independently from full floating-point precision.
+  // + wastageAmount + laborAmount + electricityAmount always equals total
+  // exactly, and total + profitAmount always equals sellingTotal exactly,
+  // instead of drifting a cent apart because each was rounded independently
+  // from full floating-point precision.
   const ingredientsTotal = round2(lines.reduce((sum, l) => sum + l.cost, 0));
   const extrasTotal = round2(extraCosts.reduce((sum, e) => sum + e.amount, 0));
-  const total = round2(ingredientsTotal + extrasTotal);
-  const yieldQuantity = recipe.baseYieldQuantity * multiplier;
-
-  const profitPercent = recipe.profitPercent || 0;
-  const sellingTotal = round2(total * (1 + profitPercent / 100));
-
-  const safeDiscountPercent = Math.min(100, Math.max(0, discountPercent || 0));
-  const finalPrice = round2(sellingTotal * (1 - safeDiscountPercent / 100));
 
   const wastagePercent = Math.max(
     0,
@@ -159,9 +158,23 @@ export function calculateRecipeCost(
     ? round2((ovenPowerWatts / 1000) * settings.electricityRatePerUnit * (bakeTimeMinutes / 60))
     : 0;
 
+  // total is the fully-loaded cost -- materials plus the automatic wastage/labour/
+  // electricity costs -- so it's the actual basis selling price is calculated from,
+  // not just a reference number shown alongside it.
+  const total = round2(
+    ingredientsTotal + extrasTotal + wastageAmount + laborAmount + electricityAmount,
+  );
+  const yieldQuantity = recipe.baseYieldQuantity * multiplier;
+
+  const profitPercent = recipe.profitPercent || 0;
+  const sellingTotal = round2(total * (1 + profitPercent / 100));
+
+  const safeDiscountPercent = Math.min(100, Math.max(0, discountPercent || 0));
+  const finalPrice = round2(sellingTotal * (1 - safeDiscountPercent / 100));
+
   // Bucket totals fold in the automatic labour/electricity amounts (on top of any
   // lines/extra costs whose group resolves to Labour/Overheads) so the breakdown
-  // adds up to actualCost below.
+  // adds up to total above.
   const bucketTotals = Object.fromEntries(
     COST_BUCKETS.map((bucket) => {
       const fromLines = lines
@@ -174,8 +187,6 @@ export function calculateRecipeCost(
       return [bucket, round2(fromLines + fromExtras + automatic)];
     }),
   ) as Record<CostBucket, number>;
-
-  const actualCost = round2(total + wastageAmount + laborAmount + electricityAmount);
 
   return {
     lines,
@@ -196,7 +207,7 @@ export function calculateRecipeCost(
     wastageAmount,
     laborAmount,
     electricityAmount,
-    actualCost,
+    actualCost: total,
   };
 }
 

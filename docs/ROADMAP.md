@@ -49,6 +49,22 @@ These were confirmed with the bakery owner before implementation started:
    Product Variant + Customer Menu Generator model instead of living
    alongside it as a second, similar system. Existing `price_listing_variants`
    rows are migrated into the new variant table; no menu items are lost.
+4. **Automatic costs are now priced in, not just shown (deviates from the
+   original Phase 1 "additive-only" decision, by explicit owner request)**:
+   Phase 1 shipped with `total`/`sellingTotal`/`profitAmount`/`finalPrice`
+   computed exactly as before, and `wastageAmount`/`laborAmount`/
+   `electricityAmount`/`actualCost` as purely informational dashboard
+   figures alongside them. The owner asked for wastage, labour, and
+   electricity to actually be reflected in the selling price rather than
+   sitting next to it unused. `total` is now `ingredientsTotal + extrasTotal
+   + wastageAmount + laborAmount + electricityAmount`, and every
+   price/profit/discount figure derives from that. `actualCost` is kept as
+   a field (equal to `total`) only because `BusinessDashboardPage` and
+   `QuoteBuilderPage` already read it as "the fully-loaded cost" — no
+   behavior change for them, since that's now literally true. This does
+   change the selling price of any existing recipe that already has active
+   time / bake time / a wastage override set — deliberately, on the owner's
+   instruction, applied automatically (no opt-in toggle).
 
 ## Open assumption to confirm before Phase 1 costing work lands
 
@@ -74,12 +90,12 @@ Schema + Settings, mostly invisible to existing recipes until they opt in.
   above), with a keyword-based guess from legacy `groupName` when
   `category` isn't set explicitly.
 - Cost breakdown restructure: `calculateRecipeCost` now additionally returns
-  `categoryTotals`, `bucketTotals` (Ingredients/Packaging/Overheads/Labour),
-  `laborAmount`, `electricityAmount`, `wastageAmount`, and `actualCost` —
-  all additive; `total`/`sellingTotal`/`profitAmount`/`finalPrice` are
-  computed exactly as before, so no existing price changes. Shown on the
+  `bucketTotals` (Ingredients/Packaging/Overheads/Labour), `laborAmount`,
+  `electricityAmount`, `wastageAmount`, and `actualCost`. Shown on the
   recipe page as a new "Cost breakdown" panel underneath the existing
-  summary.
+  summary. Originally additive-only (no effect on `total`/`sellingTotal`);
+  see locked decision #4 above -- these are now folded into `total` and
+  every price/profit figure derived from it.
 - Labour cost = hourly rate × active time (`Recipe.activeTimeMinutes`, new
   optional field, scales with batch multiplier).
 - Electricity cost = oven power × electricity rate × bake time
