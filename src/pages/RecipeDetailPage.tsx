@@ -12,6 +12,7 @@ import { RecipeCostBreakdown } from '../components/recipes/RecipeCostBreakdown';
 import { RecipeVersionHistory } from '../components/recipes/RecipeVersionHistory';
 import { CloneRecipeDialog } from '../components/recipes/CloneRecipeDialog';
 import { RenameRecipeDialog } from '../components/recipes/RenameRecipeDialog';
+import { EggFlagBadge } from '../components/recipes/EggFlagBadge';
 import { Select } from '../components/common/Select';
 import { RecipeScalePanel } from '../components/scaling/RecipeScalePanel';
 import { RecipeGroupFilter } from '../components/scaling/RecipeGroupFilter';
@@ -41,6 +42,7 @@ import { generateId } from '../lib/id';
 import { calculateRecipeCost } from '../lib/costCalculations';
 import { getGroupNames } from '../lib/recipeGroups';
 import { getEffectiveRecipe, wouldCreateCycle } from '../lib/recipeHierarchy';
+import { recipeContainsEgg } from '../lib/eggFlag';
 import {
   isNonEmptyString,
   isNonNegativeNumber,
@@ -206,17 +208,14 @@ export function RecipeDetailPage() {
     [draft, recipe],
   );
 
+  const draftEffectiveRecipe = useMemo(
+    () => getEffectiveRecipe(draftAsRecipe, recipesById),
+    [draftAsRecipe, recipesById],
+  );
+
   const baseCostResult = useMemo(
-    () =>
-      calculateRecipeCost(
-        getEffectiveRecipe(draftAsRecipe, recipesById),
-        ingredientsById,
-        1,
-        undefined,
-        0,
-        settings,
-      ),
-    [draftAsRecipe, recipesById, ingredientsById, settings],
+    () => calculateRecipeCost(draftEffectiveRecipe, ingredientsById, 1, undefined, 0, settings),
+    [draftEffectiveRecipe, ingredientsById, settings],
   );
 
   const scaledCostResult = useMemo(
@@ -396,9 +395,14 @@ export function RecipeDetailPage() {
   return (
     <PageContainer>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="min-w-0 truncate text-xl font-semibold text-slate-900">
-          {isNew ? 'New recipe' : recipe?.name || 'Recipe'}
-        </h1>
+        <div className="flex min-w-0 items-center gap-2">
+          <h1 className="min-w-0 truncate text-xl font-semibold text-slate-900">
+            {isNew ? 'New recipe' : recipe?.name || 'Recipe'}
+          </h1>
+          {!isNew && (
+            <EggFlagBadge containsEgg={recipeContainsEgg(draftEffectiveRecipe, ingredientsById)} />
+          )}
+        </div>
         <div className="flex shrink-0 gap-2">
           {recipe && (
             <>

@@ -27,7 +27,14 @@ export function IngredientTable({ ingredients, onEdit, onDelete }: IngredientTab
             const base = BASE_UNIT[getUnitCategory(ingredient.purchaseUnit)];
             return (
               <tr key={ingredient.id}>
-                <td className="px-4 py-2 font-medium text-slate-900">{ingredient.name}</td>
+                <td className="px-4 py-2 font-medium text-slate-900">
+                  {ingredient.name}
+                  {ingredient.containsEgg && (
+                    <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                      Egg
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-2 text-slate-600">
                   {formatCurrency(ingredient.purchaseCost)} for{' '}
                   {formatQuantity(ingredient.purchaseQuantity)}{' '}

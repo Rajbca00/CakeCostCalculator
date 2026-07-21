@@ -20,6 +20,7 @@ export const IngredientSchema = z.object({
   purchaseQuantity: z.number(),
   purchaseUnit: UnitSchema,
   notes: z.string().optional(),
+  containsEgg: z.boolean().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

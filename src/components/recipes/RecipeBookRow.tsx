@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom';
 import type { BusinessSettings, Ingredient, Recipe } from '../../types';
 import { calculateRecipeCost } from '../../lib/costCalculations';
 import { getEffectiveRecipe } from '../../lib/recipeHierarchy';
+import { recipeContainsEgg } from '../../lib/eggFlag';
 import { formatCurrency, formatQuantity } from '../../lib/format';
+import { EggFlagBadge } from './EggFlagBadge';
 
 interface RecipeBookRowProps {
   recipe: Recipe;
@@ -26,14 +28,8 @@ export function RecipeBookRow({
 }: RecipeBookRowProps) {
   const [expanded, setExpanded] = useState(true);
   const children = childrenByParentId.get(recipe.id) ?? [];
-  const result = calculateRecipeCost(
-    getEffectiveRecipe(recipe, recipesById),
-    ingredientsById,
-    1,
-    undefined,
-    0,
-    settings,
-  );
+  const effectiveRecipe = getEffectiveRecipe(recipe, recipesById);
+  const result = calculateRecipeCost(effectiveRecipe, ingredientsById, 1, undefined, 0, settings);
   const versionCount = versionCountByRecipeId.get(recipe.id) ?? 0;
 
   return (
@@ -61,7 +57,8 @@ export function RecipeBookRow({
               className="font-medium text-slate-900 hover:underline"
             >
               {recipe.name}
-            </Link>
+            </Link>{' '}
+            <EggFlagBadge containsEgg={recipeContainsEgg(effectiveRecipe, ingredientsById)} />
             <p className="truncate text-xs text-slate-400">
               {recipe.category ?? 'Uncategorized'} · v{versionCount + 1}
               {recipe.status ? ` (${recipe.status})` : ''}

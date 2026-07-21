@@ -91,6 +91,18 @@ These were confirmed with the bakery owner before implementation started:
    destructive to any data in that table), with a commented-out manual
    cleanup snippet at the bottom of `supabase/schema.sql` for anyone who
    wants to drop them.
+7. **Egg/Eggless flag, derived from an explicit per-ingredient flag, not
+   name guessing**: `Ingredient.containsEgg` (boolean, settable in the
+   ingredient form) marks whether an ingredient itself contains egg. A
+   recipe's Egg/Eggless badge is computed live from whether any of its
+   ingredient lines (including inherited ones, via the effective/parent-
+   merged recipe) reference an ingredient with `containsEgg` true --
+   consistent with the group-bucket precedent (locked decision on
+   `groupBuckets`) of using an explicit flag rather than guessing from the
+   ingredient name, since "Egg Replacer" or "Eggplant" would false-positive
+   on a naive `name.includes('egg')` check. Shown on the Recipe Detail page
+   header, Recipe list cards, Recipe Book rows, and the customer-facing
+   Price Listing menu.
 
 ## Open assumption to confirm before Phase 1 costing work lands
 

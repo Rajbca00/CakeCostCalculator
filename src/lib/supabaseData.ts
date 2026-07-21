@@ -26,6 +26,7 @@ interface IngredientRow {
   purchase_quantity: number;
   purchase_unit: string;
   notes: string | null;
+  contains_egg: boolean | null;
   created_at: string;
   updated_at: string;
 }
@@ -139,6 +140,7 @@ function rowToIngredient(row: IngredientRow): Ingredient {
     purchaseQuantity: row.purchase_quantity,
     purchaseUnit: row.purchase_unit as Unit,
     notes: row.notes ?? undefined,
+    containsEgg: row.contains_egg ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -153,6 +155,7 @@ function ingredientToRow(userId: string, ingredient: Ingredient): IngredientRow 
     purchase_quantity: ingredient.purchaseQuantity,
     purchase_unit: ingredient.purchaseUnit,
     notes: ingredient.notes ?? null,
+    contains_egg: ingredient.containsEgg ?? null,
     created_at: ingredient.createdAt,
     updated_at: ingredient.updatedAt,
   };
